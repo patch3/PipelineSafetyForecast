@@ -2,8 +2,8 @@ package gas.pipeline.safety.forecast.service.models;
 
 
 import gas.pipeline.safety.forecast.config.ModelsConfig;
-import gas.pipeline.safety.forecast.config.PressureModelsConfig;
-import gas.pipeline.safety.forecast.model.SensorReading;
+import gas.pipeline.safety.forecast.model.sensor.Sensor;
+import gas.pipeline.safety.forecast.model.sensor.SensorReading;
 import gas.pipeline.safety.forecast.repository.SensorReadingRepository;
 import gas.pipeline.safety.forecast.util.PressureAnalyzer;
 import lombok.val;
@@ -30,43 +30,17 @@ public class LeakDetectionService extends BaseLeakService {
                 .filter(reading -> !reading.isLeak())
                 .forEach(reading ->
                         pressureAnalyzer.analyzePressure(
-                                reading.getSensorId(),
+                                reading.getSensor().getName(),
                                 reading.getPressure()
                         )
                 );
     }
 
 
-    /*@PostConstruct
-    public void init() {
-        val endDate = LocalDateTime.now();
-        val startDate = endDate.minusDays(modelsConfig.getTrainingDays());
-
-        val sensorIds = sensorReadingRepository.findDistinctSensorIds();
-
-        for (String sensorId : sensorIds) {
-            List<SensorReading> trainingData = sensorReadingRepository
-                    .findBySensorIdAndTimestampBetweenAndIsLeakFalse(
-                            sensorId,
-                            startDate,
-                            endDate
-                    );
-
-            // Обучение модели на нормальных данных
-            trainingData.forEach(reading ->
-                    pressureAnalyzer.analyzePressure(
-                            reading.getSensorId(),
-                            reading.getPressure()
-                    )
-            );
-        }
-    }*/
-
-
-    public SensorReading processSensorReading(String sensorId, double pressure, LocalDateTime timestamp) {
-        val isLeak = pressureAnalyzer.analyzePressure(sensorId, pressure);
+    public SensorReading processSensorReading(String sensorName, double pressure, LocalDateTime timestamp) {
+        val isLeak = pressureAnalyzer.analyzePressure(sensorName, pressure);
         val reading = new SensorReading(
-                sensorId,
+                new Sensor(sensorName),
                 pressure,
                 isLeak,
                 timestamp

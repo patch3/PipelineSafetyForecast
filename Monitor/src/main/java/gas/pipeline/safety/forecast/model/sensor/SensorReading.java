@@ -1,9 +1,6 @@
-package gas.pipeline.safety.forecast.model;
+package gas.pipeline.safety.forecast.model.sensor;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -18,14 +15,18 @@ public class SensorReading {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    private String sensorId;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "sensor_id", nullable = false)
+    private Sensor sensor;
+
     private double pressure;
     private boolean isLeak;
     private LocalDateTime timestamp;
 
 
-    public SensorReading(String sensorId, double pressure, boolean isLeak, LocalDateTime timestamp) {
-        this.sensorId = sensorId;
+    public SensorReading(Sensor sensorName, double pressure, boolean isLeak, LocalDateTime timestamp) {
+        this.sensor = sensorName;
         this.pressure = pressure;
         this.isLeak = isLeak;
         this.timestamp = timestamp;

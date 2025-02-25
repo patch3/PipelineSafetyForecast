@@ -1,9 +1,8 @@
 package gas.pipeline.safety.forecast.repository;
 
-import gas.pipeline.safety.forecast.model.SensorReading;
+import gas.pipeline.safety.forecast.model.sensor.SensorReading;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
@@ -16,7 +15,7 @@ public interface SensorReadingRepository extends JpaRepository<SensorReading, Lo
 
     long countBySensorIdAndTimestampAfter(String sensorId, LocalDateTime timestamp);
 
-    @Query("SELECT DISTINCT s.sensorId FROM SensorReading s")
+    @Query("SELECT DISTINCT s.sensorName FROM SensorReading s")
     List<String> findDistinctSensorIds();
 
 

@@ -1,7 +1,7 @@
 package gas.pipeline.safety.forecast.service.models;
 
 import gas.pipeline.safety.forecast.config.ModelsConfig;
-import gas.pipeline.safety.forecast.model.SensorReading;
+import gas.pipeline.safety.forecast.model.sensor.SensorReading;
 import gas.pipeline.safety.forecast.repository.SensorReadingRepository;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
