@@ -15,11 +15,11 @@ import org.springframework.context.annotation.Scope;
 @PropertySource("classpath:config/model.properties")
 public class ModelsConfig {
     @Value("${training.days}")
-    private Integer trainingDays;
+    private int trainingDays;
     @Value("${prediction.days}")
-    private Integer predictionDays;
+    private int predictionDays;
     @Value("${average.frequency}")
-    private Integer averageFrequency;
+    private int averageFrequency;
 
 
     @Bean

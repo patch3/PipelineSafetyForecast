@@ -4,6 +4,7 @@ import gas.pipeline.safety.forecast.config.ModelsConfig;
 import gas.pipeline.safety.forecast.model.sensor.SensorReading;
 import gas.pipeline.safety.forecast.repository.SensorReadingRepository;
 import gas.pipeline.safety.forecast.util.BayesianLeakModel;
+import gas.pipeline.safety.forecast.util.PressureAnalyzer;
 import lombok.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,6 +19,7 @@ import java.util.List;
 @Service
 public class LeakPredictionsService extends BaseLeakService {
     private final BayesianLeakModel leakModel;
+    private final PressureAnalyzer pressureAnalyzer;
 
     private final int defaultTrainingDays;
     private final int defaultPredictionsDays;
@@ -26,11 +28,12 @@ public class LeakPredictionsService extends BaseLeakService {
 
     @Autowired
     public LeakPredictionsService(SensorReadingRepository sensorReadingRepo,
-                                  BayesianLeakModel leakModel,
+                                  BayesianLeakModel leakModel, PressureAnalyzer pressureAnalyzer,
                                   ModelsConfig modelsConfig) {
         super(sensorReadingRepo, modelsConfig);
 
         this.leakModel = leakModel;
+        this.pressureAnalyzer = pressureAnalyzer;
 
         this.defaultTrainingDays = modelsConfig.getTrainingDays();
         this.defaultPredictionsDays = modelsConfig.getPredictionDays();
@@ -60,36 +63,47 @@ public class LeakPredictionsService extends BaseLeakService {
     }
 
     public List<LeakPrediction> generatePredictionsForPeriod(String sensorName) {
-        val forecastModel = new BayesianLeakModel(leakModel);
+        val forecastBayesianModel = new BayesianLeakModel(leakModel);
+        val forecastPressureModel = new PressureAnalyzer(pressureAnalyzer);
 
-        var frequency = calculateFrequency(sensorName);
-        if (frequency <= 0) {
-            frequency = defaultAverageFrequency; // Используем значение по умолчанию
+        val originalStats = pressureAnalyzer.getSensorStats(sensorName);
+        if (originalStats != null) {
+            forecastPressureModel.getSensorStats().put(sensorName,
+                    PressureAnalyzer.SensorStats.builder()
+                            .mean(originalStats.getMean())
+                            .variance(originalStats.getVariance())
+                            .count(originalStats.getCount())
+                            .cusum(originalStats.getCusum())
+                            .build());
         }
 
-        val intervalMinutes = (long) (1440 / frequency);
+        var frequency = calculateFrequency(sensorName);
+        frequency = frequency > 0 ? frequency : defaultAverageFrequency; // Используем значение по умолчанию
+
+
+        val intervalMinutes = (long) (1440L / frequency);
         val totalPredictions = (int) (defaultPredictionsDays * frequency);
 
-        val timeFirstPoint = LocalDateTime.now().minusMinutes(intervalMinutes);
-
         val predictions = new ArrayList<LeakPrediction>(totalPredictions);
-
+        val currentTime = LocalDateTime.now();
 
         for (long i = 0; i < totalPredictions; i++) {
-            // TODO пока принимаются в качестве прогнозируемого давления среднее в нормали, но может можно это определять?
-            val predictedPressure = forecastModel.getNormalMean(sensorName);
+            // прогноз давления с учетом тренда
+            val predictedPressure = forecastPressureModel.predictNextPressure(sensorName);
 
             // Обновляем модель-копию прогнозируемым давлением (без реальной утечки)
-            forecastModel.update(sensorName, false, predictedPressure);
+            forecastBayesianModel.update(sensorName, false, predictedPressure);
 
             // Получаем вероятность из обновленной копии
-            val probability = forecastModel.getLeakProbability(sensorName);
+            val probability = forecastBayesianModel.getLeakProbability(sensorName);
 
-            val prediction = LeakPrediction.builder()
-                    .timestamp(timeFirstPoint.plusMinutes(i * intervalMinutes))
-                    .probability(probability) // TODO здесь должна быть определеноя вероятность для следующей итерации данных датчика
-                    .build();
-            predictions.add(prediction);
+            // обновляем модель давления на будущие
+            forecastPressureModel.analyzePressure(sensorName, predictedPressure);
+
+            predictions.add(LeakPrediction.builder()
+                    .timestamp(currentTime.plusMinutes(i * intervalMinutes))
+                    .probability(probability)
+            .build());
         }
         return predictions;
     }
