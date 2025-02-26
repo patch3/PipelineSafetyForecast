@@ -3,8 +3,9 @@
 <head>
     <title>Прогнозы утечек</title>
     <link href="/styles/predictions.css" rel="stylesheet">
-    <meta name="start-time" th:content="${#temporals.format(start, 'yyyy-MM-dd HH:mm')}"/>
-    <meta name="end-time" th:content="${#temporals.format(end, 'yyyy-MM-dd HH:mm')}"/>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/luxon@3.3.0"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@1.3.1"></script>
 </head>
 <body>
 <div class="container">
@@ -15,37 +16,66 @@
         </form>
     </header>
 
-    <form method="get" class="date-range-form">
-        <div class="form-group">
-            <label>С:</label>
-            <input name="start" th:value="${#temporals.format(start, 'yyyy-MM-dd HH:mm')}" type="datetime-local">
-        </div>
-        <div class="form-group">
-            <label>По:</label>
-            <input name="end" th:value="${#temporals.format(end, 'yyyy-MM-dd HH:mm')}" type="datetime-local">
-        </div>
-        <button type="submit" class="show-button">Показать</button>
-    </form>
-
-    <table class="predictions-table">
-        <thead>
-        <tr>
-            <th>Датчик</th>
-            <th>Время</th>
-            <th>Вероятность утечки</th>
-        </tr>
-        </thead>
-        <tbody>
-        <tr th:each="p : ${predictions}">
-            <td th:text="${p.sensorId}"></td>
-            <td th:text="${#temporals.format(p.timestamp, 'yyyy-MM-dd HH:mm')}"></td>
-            <td th:text="${#numbers.formatDecimal(p.leakProbability, 1, 2)}"></td>
-        </tr>
-        </tbody>
-    </table>
-    <canvas id="chart" width="400" height="200"></canvas>
-    <script th:src="@{/scripts/lib/chart.js}"></script>
-    <script th:src="@{/scripts/chart/leak-show.js}"></script>
+    <div id="charts-container"></div>
 </div>
+<script th:inline="javascript">
+    document.addEventListener('DOMContentLoaded', function() {
+        const predictionsData = JSON.parse(/*[[${predictions}]]*/ '{}');
+        const container = document.getElementById('charts-container');
+
+        Object.entries(predictionsData).forEach(([sensorName, data]) => {
+            // Создаем контейнер для графика
+            const chartDiv = document.createElement('div');
+            chartDiv.className = 'chart-container';
+
+            // Добавляем заголовок
+            const title = document.createElement('h2');
+            title.textContent = `Датчик: ${sensorName}`;
+            chartDiv.appendChild(title);
+
+            // Создаем canvas
+            const canvas = document.createElement('canvas');
+            chartDiv.appendChild(canvas);
+            container.appendChild(chartDiv);
+
+            // Форматируем данные
+            const chartData = {
+                datasets: [{
+                    label: 'Вероятность утечки (%)',
+                    data: data.map(item => ({
+                        x: item.timestamp,
+                        y: item.probability * 100
+                    })),
+                    borderColor: '#1976d2',
+                    tension: 0.1
+                }]
+            };
+
+            // Конфигурация графика
+            new Chart(canvas, {
+                type: 'line',
+                data: chartData,
+                options: {
+                    responsive: true,
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: {
+                                unit: 'day',
+                                tooltipFormat: 'dd.MM.yyyy HH:mm'
+                            },
+                            title: { display: true, text: 'Время' }
+                        },
+                        y: {
+                            min: 0,
+                            max: 100,
+                            title: { display: true, text: 'Вероятность (%)' }
+                        }
+                    }
+                }
+            });
+        });
+    });
+</script>
 </body>
 </html>

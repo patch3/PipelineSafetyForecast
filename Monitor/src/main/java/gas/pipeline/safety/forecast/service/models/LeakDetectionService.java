@@ -5,6 +5,7 @@ import gas.pipeline.safety.forecast.config.ModelsConfig;
 import gas.pipeline.safety.forecast.model.sensor.Sensor;
 import gas.pipeline.safety.forecast.model.sensor.SensorReading;
 import gas.pipeline.safety.forecast.repository.SensorReadingRepository;
+import gas.pipeline.safety.forecast.repository.SensorRepository;
 import gas.pipeline.safety.forecast.util.PressureAnalyzer;
 import lombok.val;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,12 +17,16 @@ import java.util.List;
 @Service
 public class LeakDetectionService extends BaseLeakService {
     private final PressureAnalyzer pressureAnalyzer;
+    private final SensorRepository sensorRepository;
+
     @Autowired
     public LeakDetectionService(SensorReadingRepository sensorReadingRepository,
                                 ModelsConfig modelsConfig,
-                                PressureAnalyzer pressureAnalyzer) {
+                                PressureAnalyzer pressureAnalyzer,
+                                SensorRepository sensorRepository) {
         super(sensorReadingRepository, modelsConfig);
         this.pressureAnalyzer = pressureAnalyzer;
+        this.sensorRepository = sensorRepository;
     }
 
     @Override
@@ -38,13 +43,13 @@ public class LeakDetectionService extends BaseLeakService {
 
 
     public SensorReading processSensorReading(String sensorName, double pressure, LocalDateTime timestamp) {
+        val sensor = sensorRepository.findByName(sensorName).orElseGet(() -> {
+                val newSensor = new Sensor(sensorName);
+                return sensorRepository.save(newSensor);
+        });
+
         val isLeak = pressureAnalyzer.analyzePressure(sensorName, pressure);
-        val reading = new SensorReading(
-                new Sensor(sensorName),
-                pressure,
-                isLeak,
-                timestamp
-        );
+        val reading = new SensorReading(sensor, pressure, isLeak, timestamp);
         return sensorReadingRepo.save(reading);
     }
 }

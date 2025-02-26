@@ -11,12 +11,13 @@ import java.util.Optional;
 
 @Repository
 public interface SensorReadingRepository extends JpaRepository<SensorReading, Long> {
-    List<SensorReading> findBySensorIdAndTimestampAfter(String sensorId, LocalDateTime timestamp);
 
-    long countBySensorIdAndTimestampAfter(String sensorId, LocalDateTime timestamp);
+    List<SensorReading> findBySensorNameAndTimestampAfter(String sensorName, LocalDateTime timestamp);
 
-    @Query("SELECT DISTINCT s.sensorName FROM SensorReading s")
-    List<String> findDistinctSensorIds();
+    long countBySensorNameAndTimestampAfter(String sensorName, LocalDateTime timestamp);
+
+    @Query("SELECT DISTINCT s.sensor.name FROM SensorReading s")
+    List<String> findDistinctSensorNames();
 
 
     @Query("SELECT timestamp FROM SensorReading ORDER BY timestamp ASC LIMIT 1")
@@ -25,8 +26,8 @@ public interface SensorReadingRepository extends JpaRepository<SensorReading, Lo
     @Query("SELECT timestamp FROM SensorReading ORDER BY timestamp DESC LIMIT 1")
     Optional<LocalDateTime> findLastTimestamp();
 
-    List<SensorReading> findBySensorIdAndTimestampBetweenAndIsLeakFalse(
-            String sensorId,
+    List<SensorReading> findBySensorNameAndTimestampBetweenAndIsLeakFalse(
+            String sensorName,
             LocalDateTime start,
             LocalDateTime end
     );

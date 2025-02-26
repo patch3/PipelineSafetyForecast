@@ -4,9 +4,8 @@ import gas.pipeline.safety.forecast.config.ModelsConfig;
 import gas.pipeline.safety.forecast.model.sensor.SensorReading;
 import gas.pipeline.safety.forecast.repository.SensorReadingRepository;
 import gas.pipeline.safety.forecast.util.BayesianLeakModel;
-import lombok.Data;
+import lombok.*;
 import lombok.extern.slf4j.Slf4j;
-import lombok.val;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -53,7 +52,6 @@ public class LeakPredictionsService extends BaseLeakService {
 
 
     public void processNewReadings(SensorReading reading) {
-
         //sensorReadingRepo.save(reading);
         leakModel.update(reading.getSensor().getName(), reading.isLeak(), reading.getPressure());
 
@@ -87,10 +85,10 @@ public class LeakPredictionsService extends BaseLeakService {
             // Получаем вероятность из обновленной копии
             val probability = forecastModel.getLeakProbability(sensorName);
 
-            val prediction = new LeakPrediction();
-            prediction.setSensorName(sensorName);
-            prediction.setTimestamp(timeFirstPoint.minusMinutes(i * intervalMinutes));
-            prediction.setLeakProbability(probability); // TODO здесь должна быть определеноя вероятность для следующей итерации данных датчика
+            val prediction = LeakPrediction.builder()
+                    .timestamp(timeFirstPoint.plusMinutes(i * intervalMinutes))
+                    .probability(probability) // TODO здесь должна быть определеноя вероятность для следующей итерации данных датчика
+                    .build();
             predictions.add(prediction);
         }
         return predictions;
@@ -113,7 +111,7 @@ public class LeakPredictionsService extends BaseLeakService {
             trainingDays = difference;
         }
 
-        val count = sensorReadingRepo.countBySensorIdAndTimestampAfter(
+        val count = sensorReadingRepo.countBySensorNameAndTimestampAfter(
                 sensorModel,
                 LocalDateTime.now().minusDays(trainingDays)
         );
@@ -129,10 +127,11 @@ public class LeakPredictionsService extends BaseLeakService {
     }
 
     @Data
+    @AllArgsConstructor
+    @NoArgsConstructor
+    @Builder
     public static class LeakPrediction {
-        private Long id;
-        private String sensorName;
         private LocalDateTime timestamp;
-        private double leakProbability;
+        private double probability;
     }
 }

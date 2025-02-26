@@ -22,28 +22,28 @@ class PressureAnalyzerTest {
     @Test
     void testCalibrationPhase() {
         for (int i = 0; i < 9; i++) {
-            assertThat(analyzer.analyzePressure(SENSOR_ID, 100.0)).isFalse();
+            assertThat(analyzer.analyzePressure(SENSOR_ID, 10.0)).isFalse();
         }
-        assertThat(analyzer.analyzePressure(SENSOR_ID, 100.0)).isFalse();
+        assertThat(analyzer.analyzePressure(SENSOR_ID, 10.0)).isFalse();
     }
 
     // Проверяет срабатывание утечки при превышении порога Z-скор (аномалия в одном измерении)
     @Test
     void testZScoreExceeded() {
         completeCalibration(100.0);
-        assertThat(analyzer.analyzePressure(SENSOR_ID, 104.0)).isTrue();
+        assertThat(analyzer.analyzePressure(SENSOR_ID, 12.0)).isTrue();
     }
 
     // Проверяет срабатывание утечки при накоплении отклонений (CUSUM)
     @Test
     void testCusumExceeded() {
-        completeCalibration(100.0);
+        completeCalibration(10.0);
 
-        analyzer.analyzePressure(SENSOR_ID, 101.0); // +1 сигма
-        analyzer.analyzePressure(SENSOR_ID, 101.0);
-        analyzer.analyzePressure(SENSOR_ID, 101.0);
+        analyzer.analyzePressure(SENSOR_ID, 11.0); // +1 сигма
+        analyzer.analyzePressure(SENSOR_ID, 11.0);
+        analyzer.analyzePressure(SENSOR_ID, 11.0);
 
-        assertThat(analyzer.analyzePressure(SENSOR_ID, 101.0)).isTrue();
+        assertThat(analyzer.analyzePressure(SENSOR_ID, 11.0)).isTrue();
     }
 
     // Проверяет, что статистика не обновляется при обнаружении утечки
@@ -53,7 +53,7 @@ class PressureAnalyzerTest {
         val initialCount = analyzer.getSensorStats(SENSOR_ID).getCount();
 
         // Аномальное значение
-        analyzer.analyzePressure(SENSOR_ID, 104.0);
+        analyzer.analyzePressure(SENSOR_ID, 12.0);
 
         assertThat(analyzer.getSensorStats(SENSOR_ID).getCount()).isEqualTo(initialCount);
     }
@@ -77,23 +77,23 @@ class PressureAnalyzerTest {
     // Проверяет независимость статистики для разных датчиков
     @Test
     void testMultipleSensors() {
-        completeCalibration(SENSOR_ID, 100.0);
-        completeCalibration(OTHER_SENSOR_ID, 200.0);
+        completeCalibration(SENSOR_ID, 10.0);
+        completeCalibration(OTHER_SENSOR_ID, 20.0);
 
         PressureAnalyzer.SensorStats stats1 = analyzer.getSensorStats(SENSOR_ID);
         PressureAnalyzer.SensorStats stats2 = analyzer.getSensorStats(OTHER_SENSOR_ID);
 
-        assertThat(stats1.getMean()).isEqualTo(100.0);
-        assertThat(stats2.getMean()).isEqualTo(200.0);
+        assertThat(stats1.getMean()).isEqualTo(10.0);
+        assertThat(stats2.getMean()).isEqualTo(20.0);
     }
 
     // Проверяет обработку случая с нулевой дисперсией (все измерения одинаковы)
     @Test
     void testZeroVariance() {
-        completeCalibration(100.0);
+        completeCalibration(10.0);
 
         // При stdDev = 0 любое отклонение - бесконечный Z-score
-        assertThat(analyzer.analyzePressure(SENSOR_ID, 101.0)).isTrue();
+        assertThat(analyzer.analyzePressure(SENSOR_ID, 11.0)).isTrue();
     }
 
     private void completeCalibration(String sensorId, double value) {

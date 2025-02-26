@@ -19,10 +19,10 @@ public abstract class BaseLeakService {
     protected void loadSensorReadings() {
         val trainingDay = modelsConfig.getTrainingDays();
         val startDate = LocalDateTime.now().minusDays(trainingDay);
-        val sensorIds = sensorReadingRepo.findDistinctSensorIds();
+        val sensorIds = sensorReadingRepo.findDistinctSensorNames();
 
         sensorIds.forEach(sensorId -> {
-            val data = sensorReadingRepo.findBySensorIdAndTimestampAfter(
+            val data = sensorReadingRepo.findBySensorNameAndTimestampAfter(
                     sensorId,
                     startDate
             );

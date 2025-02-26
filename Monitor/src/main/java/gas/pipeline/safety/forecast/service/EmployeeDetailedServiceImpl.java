@@ -12,7 +12,6 @@ import org.springframework.stereotype.Service;
 @Service
 public class EmployeeDetailedServiceImpl implements UserDetailsService {
     private final EmployeeRepository employeeRepository;
-
     @Autowired
     public EmployeeDetailedServiceImpl(EmployeeRepository repository) {
         this.employeeRepository = repository;
@@ -28,4 +27,6 @@ public class EmployeeDetailedServiceImpl implements UserDetailsService {
                 .password(employee.getPassword())
                 .build();
     }
+
+
 }

@@ -1,5 +1,6 @@
 package gas.pipeline.safety.forecast.util;
 
+import lombok.Builder;
 import lombok.Data;
 import lombok.val;
 
@@ -32,10 +33,11 @@ public class PressureAnalyzer {
     private final Map<String, SensorStats> sensorStats = new HashMap<>();
 
 
+
     public PressureAnalyzer() {
-        this.CUSUM_THRESHOLD = 5.0;
-        this.LEAK_THRESHOLD = 3.0;
-        this.NUM_CALIBRATION_RECORDS = 10;
+        this.CUSUM_THRESHOLD = 7.0;
+        this.LEAK_THRESHOLD = 4.0;
+        this.NUM_CALIBRATION_RECORDS = 20;
     }
 
     public PressureAnalyzer(double cusumThreshold,
@@ -49,13 +51,20 @@ public class PressureAnalyzer {
     /**
      * Анализирует текущее показание давления для указанного датчика.
      *
-     * @param sensorId уникальный идентификатор датчика
+     * @param sensorName уникальный идентификатор датчика
      * @param pressure текущее значение давления
      * @return true - обнаружена утечка, false - аномалий нет
      */
-    public boolean analyzePressure(String sensorId, double pressure) {
+    public boolean analyzePressure(String sensorName, double pressure) {
         // Получаем или создаем статистику для датчика
-        val stats = sensorStats.computeIfAbsent(sensorId, k -> new SensorStats());
+        val stats = sensorStats.computeIfAbsent(sensorName,
+                k -> SensorStats.builder()
+                        .count(0)
+                        .mean(pressure)
+                        .variance(0)
+                        .cusum(0)
+                        .build()
+        );
 
         // Калибровка: первые NUM_CALIBRATION_RECORDS измерений для накопления статистики
         if (stats.getCount() < NUM_CALIBRATION_RECORDS) {
@@ -110,6 +119,8 @@ public class PressureAnalyzer {
         val cusum = Math.max(0, stats.getCusum() + (value - stats.getMean()) / stdDev - 0.5);
         stats.setCusum(cusum);
 
+
+
         // Условие срабатывания: превышение любого из порогов
         return zScore > LEAK_THRESHOLD || cusum > CUSUM_THRESHOLD;
     }
@@ -122,6 +133,7 @@ public class PressureAnalyzer {
      * Для хранения статистики датчика.
      */
     @Data
+    @Builder
     public static class SensorStats {
         /**
          * Текущее среднее значение давления

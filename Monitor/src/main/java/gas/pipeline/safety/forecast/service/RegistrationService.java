@@ -1,7 +1,6 @@
 package gas.pipeline.safety.forecast.service;
 
 import gas.pipeline.safety.forecast.model.Employee;
-
 import gas.pipeline.safety.forecast.repository.EmployeeRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
