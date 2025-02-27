@@ -21,7 +21,8 @@ public class PressureAnalyzer {
     private final double CUSUM_THRESHOLD; // Порог для кумулятивного суммирования отклонений (CUSUM)
     private final double LEAK_THRESHOLD; // Порог Z-скор для мгновенного обнаружения аномалий
     private final int NUM_CALIBRATION_RECORDS;
-    private final int MOVING_AVERAGE_WINDOW;
+    private final int FILTER_WINDOW;
+    private final FilterType FILTER_TYPE;
 
     @Getter
     private final Map<String, SensorStats> sensorStats;
@@ -29,21 +30,19 @@ public class PressureAnalyzer {
 
 
     public PressureAnalyzer() {
-        this.CUSUM_THRESHOLD = 7.0;
-        this.LEAK_THRESHOLD = 4.0;
-        this.NUM_CALIBRATION_RECORDS = 20;
-        this.MOVING_AVERAGE_WINDOW = 5;
-        this.sensorStats = new HashMap<>();
-        this.sensorMeasurements = new HashMap<>();
+        this(7, 4, 20, 10, FilterType.MOVING_AVERAGE);
     }
 
     public PressureAnalyzer(double cusumThreshold,
                             double leakThreshold,
-                            int numCalibrationRecords) {
+                            int numCalibrationRecords,
+                            int filterWindow,
+                            FilterType filterType) {
         this.CUSUM_THRESHOLD = cusumThreshold;
         this.LEAK_THRESHOLD = leakThreshold;
         this.NUM_CALIBRATION_RECORDS = numCalibrationRecords;
-        this.MOVING_AVERAGE_WINDOW = 5;
+        this.FILTER_WINDOW = filterWindow;
+        this.FILTER_TYPE = filterType;
         this.sensorStats = new HashMap<>();
         this.sensorMeasurements = new HashMap<>();
     }
@@ -52,7 +51,8 @@ public class PressureAnalyzer {
         this.CUSUM_THRESHOLD = copy.CUSUM_THRESHOLD;
         this.LEAK_THRESHOLD = copy.LEAK_THRESHOLD;
         this.NUM_CALIBRATION_RECORDS = copy.NUM_CALIBRATION_RECORDS;
-        this.MOVING_AVERAGE_WINDOW = copy.MOVING_AVERAGE_WINDOW;
+        this.FILTER_WINDOW = copy.FILTER_WINDOW;
+        this.FILTER_TYPE = copy.FILTER_TYPE;
         this.sensorStats = new HashMap<>(copy.sensorStats);
         this.sensorMeasurements = new HashMap<>(copy.sensorMeasurements);
     }
@@ -65,7 +65,7 @@ public class PressureAnalyzer {
      * @return true - обнаружена утечка, false - аномалий нет
      */
     public boolean analyzePressure(String sensorName, double pressure) {
-        val filteredPressure = applyMovingAverage(sensorName, pressure);
+        val filteredPressure = applyFilter(sensorName, pressure);
 
         // статистика для датчика
         val stats = sensorStats.computeIfAbsent(sensorName,
@@ -89,7 +89,7 @@ public class PressureAnalyzer {
         if (!isLeak) {
             updateStats(stats, pressure);
         } else {
-            return isLeak;
+            return isLeak; // для точки дебага
         }
         return isLeak;
     }
@@ -134,19 +134,54 @@ public class PressureAnalyzer {
         return zScore > LEAK_THRESHOLD || cusum > CUSUM_THRESHOLD;
     }
 
+    private double applyFilter(String sensorName, double pressure) {
+        return switch (FILTER_TYPE) {
+            case MOVING_AVERAGE -> applyMovingAverage(sensorName, pressure);
+            case MEDIAN -> applyMedianFilter(sensorName, pressure);
+        };
+    }
+
+    /**
+     * Фильтрация по скользящей средней
+     */
     private double applyMovingAverage(String sensorName, double value) {
         val measurements = sensorMeasurements.computeIfAbsent(
                 sensorName,
-                k -> new ArrayDeque<>(MOVING_AVERAGE_WINDOW)
+                k -> new ArrayDeque<>(FILTER_WINDOW)
         );
         measurements.addLast(value);
-        if (measurements.size() > MOVING_AVERAGE_WINDOW) {
+        if (measurements.size() > FILTER_WINDOW) {
             measurements.removeLast();
         }
         return measurements.stream()
                 .mapToDouble(Double::doubleValue)
                 .average()
                 .orElse(value);
+    }
+
+    /**
+     * Фильтрация по медиане
+     */
+    private double applyMedianFilter(String sensorName, double value) {
+        Deque<Double> measurements = sensorMeasurements.computeIfAbsent(
+                sensorName,
+                k -> new ArrayDeque<>(FILTER_WINDOW)
+        );
+
+        measurements.addLast(value);
+        if (measurements.size() > FILTER_WINDOW) {
+            measurements.removeFirst();
+        }
+
+        List<Double> sorted = new ArrayList<>(measurements);
+        Collections.sort(sorted);
+
+        int middle = sorted.size() / 2;
+        if (sorted.size() % 2 == 0) {
+            return (sorted.get(middle - 1) + sorted.get(middle)) / 2.0;
+        } else {
+            return sorted.get(middle);
+        }
     }
 
     public double predictNextPressure(String sensorName) {
@@ -198,5 +233,20 @@ public class PressureAnalyzer {
         private double variance; // Накопленная дисперсия
         private int count; // Количество учтенных измерений
         private double cusum; // Текущее значение кумулятивной суммы отклонений
+    }
+
+    public enum FilterType {
+        MOVING_AVERAGE,
+        MEDIAN;
+
+        public static Optional<FilterType> fromString(String text) {
+            if (text == null) return Optional.empty();
+            for (FilterType type : FilterType.values()) {
+                if (type.name().equalsIgnoreCase(text)) {
+                    return Optional.of(type);
+                }
+            }
+            return Optional.empty();
+        }
     }
 }

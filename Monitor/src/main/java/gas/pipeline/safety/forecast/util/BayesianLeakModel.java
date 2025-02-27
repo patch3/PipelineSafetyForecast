@@ -1,7 +1,5 @@
 package gas.pipeline.safety.forecast.util;
 
-import lombok.Getter;
-import lombok.NoArgsConstructor;
 import lombok.val;
 import org.apache.commons.math3.distribution.NormalDistribution;
 
@@ -14,9 +12,6 @@ import java.util.Map;
  * Обновляет статистики (среднее, дисперсию) в реальном времени и применяет формулу Байеса.
  */
 public class BayesianLeakModel {
-    /**
-     * Карта для хранения текущих вероятностей утечек по идентификаторам датчиков
-     */
     private final Map<String, Double>  leakProbabilities;
 
     // Статистики для нормального режима работы
@@ -156,37 +151,8 @@ public class BayesianLeakModel {
         val leak = leakCount.getOrDefault(sensorName, 0L);
         val total = normal + leak;
 
-        // Возвращает 1% при отсутствии данных для избежания нулевых вероятностей
-        if (total == 0) return 0.01;
+
+        if (total == 0) return 0.01; // для избежания нулевых вероятностей
         return (double) leak / total;
-    }
-
-
-    public Double getLeakProbabilitiesBy(String sensorName) {
-        return leakProbabilities.get(sensorName);
-    }
-
-    public Double getNormalMean(String sensorName) {
-        return normalMean.get(sensorName);
-    }
-
-    public Double getNormalVariance(String sensorName) {
-        return normalVariance.get(sensorName);
-    }
-
-    public Long getNormalCount(String sensorName) {
-        return normalCount.get(sensorName);
-    }
-
-    public Double getLeakMean(String sensorName) {
-        return leakMean.get(sensorName);
-    }
-
-    public Double getLeakVariance(String sensorName) {
-        return leakVariance.get(sensorName);
-    }
-
-    public Long getLeakCount(String sensorName) {
-        return leakCount.get(sensorName);
     }
 }
