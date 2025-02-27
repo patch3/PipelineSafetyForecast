@@ -11,15 +11,15 @@
 <div class="container">
     <header>
         <h1>Прогнозы утечек</h1>
-        <form th:action="@{/logout}" method="post">
-            <button type="submit" class="logout-button">Выйти</button>
+        <form method="post" th:action="@{/logout}">
+            <button class="logout-button" type="submit">Выйти</button>
         </form>
     </header>
 
     <div id="charts-container"></div>
 </div>
 <script th:inline="javascript">
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function () {
         const predictionsData = JSON.parse(/*[[${predictions}]]*/ '{}');
         const container = document.getElementById('charts-container');
 
@@ -64,12 +64,12 @@
                                 unit: 'day',
                                 tooltipFormat: 'dd.MM.yyyy HH:mm'
                             },
-                            title: { display: true, text: 'Время' }
+                            title: {display: true, text: 'Время'}
                         },
                         y: {
                             min: 0,
                             max: 100,
-                            title: { display: true, text: 'Вероятность (%)' }
+                            title: {display: true, text: 'Вероятность (%)'}
                         }
                     }
                 }

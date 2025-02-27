@@ -52,7 +52,7 @@ public class ValueAnnotationLogger implements BeanPostProcessor {
     }
 
     @Override
-    public Object postProcessAfterInitialization(@NonNull Object bean, @NonNull  String beanName) throws BeansException {
+    public Object postProcessAfterInitialization(@NonNull Object bean, @NonNull String beanName) throws BeansException {
         return bean;
     }
 }

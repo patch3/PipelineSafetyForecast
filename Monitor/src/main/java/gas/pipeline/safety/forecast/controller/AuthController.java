@@ -1,15 +1,10 @@
 package gas.pipeline.safety.forecast.controller;
 
 import gas.pipeline.safety.forecast.dto.AuthDTO;
-import gas.pipeline.safety.forecast.service.RegistrationService;
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
-import org.springframework.validation.FieldError;
-import org.springframework.validation.ObjectError;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -17,14 +12,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 @Controller
 public class AuthController {
-    private final RegistrationService registrationService;
-
-    @Autowired
-    public AuthController(RegistrationService registrationService) {
-        this.registrationService = registrationService;
-    }
-
-
     @GetMapping("/login")
     public String login(
             @RequestParam(value = "error", required = false) String error,
@@ -38,12 +25,11 @@ public class AuthController {
         if (logout != null) {
             model.addAttribute("logout", "Вы успешно вышли из системы.");
         }
-        if (reg != null){
+        if (reg != null) {
             model.addAttribute("registred", "Вы успешно зарегистрировались");
         }
         return "login";
     }
-
 
 
     @GetMapping("/registration")
@@ -63,16 +49,11 @@ public class AuthController {
             @Valid @ModelAttribute("form") AuthDTO dto,
             BindingResult result,
             Model model
-            ) {
-        boolean isRegistered = registrationService.registerUser(dto.getUsername(), dto.getEmail(), dto.getPassword());
-
-
-        if (result.hasErrors()){
+    ) {
+        if (result.hasErrors()) {
             model.addAttribute("errors", result.getAllErrors());
             return "registration";
         }
-
-
         return "redirect:/login?registred";
     }
 }

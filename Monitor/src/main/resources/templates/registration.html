@@ -1,42 +1,43 @@
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="https://www.thymeleaf.org" lang="ru">
+<html lang="ru" xmlns="http://www.w3.org/1999/xhtml" xmlns:th="https://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
     <title>Регистрация</title>
     <link href="/styles/auth.css" rel="stylesheet">
 </head>
 <body>
 <div class="container">
     <h1>Регистрация</h1>
-    <form th:action="@{/registration}" method="POST" th:object="${form}">
-            <div th:if="${errors}" class="alert alert-error">
-                <ul>
-                    <li th:each="error : ${errors}" th:text="${error.defaultMessage}"></li>
-                </ul>
-            </div>
+    <form method="POST" th:action="@{/registration}" th:object="${form}">
+        <div class="alert alert-error" th:if="${errors}">
+            <ul>
+                <li th:each="error : ${errors}" th:text="${error.defaultMessage}"></li>
+            </ul>
+        </div>
         <div>
             <label for="username">Имя пользователя:</label>
-            <input type="text" id="username" name="username" placeholder="Введите имя пользователя" required />
+            <input id="username" name="username" placeholder="Введите имя пользователя" required type="text"/>
         </div>
         <div>
             <label for="email">Email:</label>
-            <input type="email" id="email" name="email" placeholder="Введите email" required />
+            <input id="email" name="email" placeholder="Введите email" required type="email"/>
         </div>
         <div>
             <label for="password">Пароль:</label>
-            <input type="password" id="password" name="password" placeholder="Введите пароль" required />
+            <input id="password" name="password" placeholder="Введите пароль" required type="password"/>
         </div>
         <div>
             <label for="confirmPassword">Подтвердите пароль:</label>
-            <input type="password" id="confirmPassword" name="confirmPassword" placeholder="Подтвердите пароль" required />
+            <input id="confirmPassword" name="confirmPassword" placeholder="Подтвердите пароль" required
+                   type="password"/>
         </div>
         <div>
             <button type="submit">Зарегистрироваться</button>
         </div>
     </form>
     <div class="login-link">
-        Уже есть аккаунт? <a th:href="@{/login}" class="login-button">Войдите</a>
+        Уже есть аккаунт? <a class="login-button" th:href="@{/login}">Войдите</a>
     </div>
 </div>
 </body>

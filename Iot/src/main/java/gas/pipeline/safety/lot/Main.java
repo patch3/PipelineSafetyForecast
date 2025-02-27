@@ -55,6 +55,7 @@ public class Main {
     }
 
     public static void main(String[] args) {
+        //noinspection InfiniteLoopStatement
         while (true) { // датчик все время отправляет данные пока работает
             HttpURLConnection conn = null;
             try {

@@ -103,7 +103,7 @@ public class LeakPredictionsService extends BaseLeakService {
             predictions.add(LeakPrediction.builder()
                     .timestamp(currentTime.plusMinutes(i * intervalMinutes))
                     .probability(probability)
-            .build());
+                    .build());
         }
         return predictions;
     }

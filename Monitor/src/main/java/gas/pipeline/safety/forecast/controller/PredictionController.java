@@ -5,7 +5,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import gas.pipeline.safety.forecast.repository.SensorRepository;
 import gas.pipeline.safety.forecast.service.models.LeakPredictionsService;
-import lombok.RequiredArgsConstructor;
 import lombok.val;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;

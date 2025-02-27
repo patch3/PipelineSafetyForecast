@@ -12,19 +12,19 @@ import java.util.Map;
  * Обновляет статистики (среднее, дисперсию) в реальном времени и применяет формулу Байеса.
  */
 public class BayesianLeakModel {
-    private final Map<String, Double>  leakProbabilities;
+    private final Map<String, Double> leakProbabilities;
 
     // Статистики для нормального режима работы
-    private final Map<String, Double>  normalMean;
-    private final Map<String, Double>  normalVariance;
+    private final Map<String, Double> normalMean;
+    private final Map<String, Double> normalVariance;
     private final Map<String, Long> normalCount;
 
     // Статистики для режима утечки
-    private final Map<String, Double>  leakMean;
-    private final Map<String, Double>  leakVariance;
+    private final Map<String, Double> leakMean;
+    private final Map<String, Double> leakVariance;
     private final Map<String, Long> leakCount;
 
-    public BayesianLeakModel(){
+    public BayesianLeakModel() {
         this.leakProbabilities = new HashMap<>();
         this.leakMean          = new HashMap<>();
         this.normalMean        = new HashMap<>();
@@ -43,12 +43,13 @@ public class BayesianLeakModel {
         this.leakVariance      = new HashMap<>(copy.leakVariance);
         this.leakCount         = new HashMap<>(copy.leakCount);
     }
+
     /**
      * Обновляет статистики и пересчитывает вероятность утечки для датчика.
      *
      * @param sensorName идентификатор датчика
-     * @param isLeak   флаг наличия утечки в текущем измерении
-     * @param pressure значение давления с датчика
+     * @param isLeak     флаг наличия утечки в текущем измерении
+     * @param pressure   значение давления с датчика
      */
     public void update(String sensorName, boolean isLeak, double pressure) {
         // Обновление статистик в зависимости от режима (утечка/норма)
@@ -83,10 +84,10 @@ public class BayesianLeakModel {
      * Обновляет статистики (среднее и дисперсию) для датчика с использованием алгоритма Уэлфорда.
      *
      * @param sensorName идентификатор датчика
-     * @param value    текущее значение давления
-     * @param meanMap  карта для хранения средних значений
-     * @param varMap   карта для хранения дисперсий
-     * @param countMap карта для хранения количества наблюдений
+     * @param value      текущее значение давления
+     * @param meanMap    карта для хранения средних значений
+     * @param varMap     карта для хранения дисперсий
+     * @param countMap   карта для хранения количества наблюдений
      */
     private void updateStats(String sensorName, double value,
                              Map<String, Double> meanMap,

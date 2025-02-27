@@ -44,8 +44,8 @@ public class LeakDetectionService extends BaseLeakService {
 
     public SensorReading processSensorReading(String sensorName, double pressure, LocalDateTime timestamp) {
         val sensor = sensorRepository.findByName(sensorName).orElseGet(() -> {
-                val newSensor = new Sensor(sensorName);
-                return sensorRepository.save(newSensor);
+            val newSensor = new Sensor(sensorName);
+            return sensorRepository.save(newSensor);
         });
 
         val isLeak = pressureAnalyzer.analyzePressure(sensorName, pressure);

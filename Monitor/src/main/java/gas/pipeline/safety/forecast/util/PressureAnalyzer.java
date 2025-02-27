@@ -61,7 +61,7 @@ public class PressureAnalyzer {
      * Анализирует текущее показание давления для указанного датчика.
      *
      * @param sensorName уникальный идентификатор датчика
-     * @param pressure текущее значение давления
+     * @param pressure   текущее значение давления
      * @return true - обнаружена утечка, false - аномалий нет
      */
     public boolean analyzePressure(String sensorName, double pressure) {
@@ -108,9 +108,10 @@ public class PressureAnalyzer {
         val newMean = stats.getMean() + delta / newCount;
         val newDelta = value - newMean;
 
+        val newVariance = ((stats.getVariance() * (stats.getCount() - 1)) + delta * newDelta) / newCount;
+
         stats.setMean(newMean);
-        // Обновление дисперсии методом Welford
-        stats.setVariance(stats.getVariance() + delta * newDelta);
+        stats.setVariance(newVariance);
         stats.setCount(newCount);
     }
 
@@ -122,13 +123,16 @@ public class PressureAnalyzer {
      * @return true - обнаружена аномалия, false - нормальное значение
      */
     private boolean checkAnomaly(SensorStats stats, double value) {
+        if (stats.getCount() <= 1) return false;
+
         // расчет стандартного отклонения
-        val stdDev = Math.sqrt(stats.getVariance() / stats.getCount());
+        val stdDev = Math.sqrt(stats.getVariance() / (stats.getCount() - 1));
         // количество сигм от среднего
         val zScore = Math.abs((value - stats.getMean()) / stdDev);
 
         // кумулятивная сумма отклонений с "дрейфом" 0.5 сигмы
         val cusum = Math.max(0, stats.getCusum() + (value - stats.getMean()) / stdDev - 0.5);
+
         stats.setCusum(cusum);
 
         return zScore > LEAK_THRESHOLD || cusum > CUSUM_THRESHOLD;
@@ -145,13 +149,13 @@ public class PressureAnalyzer {
      * Фильтрация по скользящей средней
      */
     private double applyMovingAverage(String sensorName, double value) {
-        val measurements = sensorMeasurements.computeIfAbsent(
+        Deque<Double> measurements = sensorMeasurements.computeIfAbsent(
                 sensorName,
                 k -> new ArrayDeque<>(FILTER_WINDOW)
         );
         measurements.addLast(value);
         if (measurements.size() > FILTER_WINDOW) {
-            measurements.removeLast();
+            measurements.removeFirst();
         }
         return measurements.stream()
                 .mapToDouble(Double::doubleValue)
@@ -163,20 +167,18 @@ public class PressureAnalyzer {
      * Фильтрация по медиане
      */
     private double applyMedianFilter(String sensorName, double value) {
-        Deque<Double> measurements = sensorMeasurements.computeIfAbsent(
+        val measurements = sensorMeasurements.computeIfAbsent(
                 sensorName,
                 k -> new ArrayDeque<>(FILTER_WINDOW)
         );
-
         measurements.addLast(value);
         if (measurements.size() > FILTER_WINDOW) {
             measurements.removeFirst();
         }
-
-        List<Double> sorted = new ArrayList<>(measurements);
+        val sorted = new ArrayList<>(measurements);
         Collections.sort(sorted);
 
-        int middle = sorted.size() / 2;
+        val middle = sorted.size() / 2;
         if (sorted.size() % 2 == 0) {
             return (sorted.get(middle - 1) + sorted.get(middle)) / 2.0;
         } else {
@@ -197,12 +199,12 @@ public class PressureAnalyzer {
         val y = new double[measurements.size()];
 
         var i = 0;
-        for (val measure: measurements) {
+        for (val measure : measurements) {
             x[i] = i;
             y[i] = measure;
             i++;
         }
-        val slop = calculateSlop(x,y);
+        val slop = calculateSlop(x, y);
         return y[y.length - 1] + slop;
     }
 
@@ -226,15 +228,6 @@ public class PressureAnalyzer {
         return sensorStats.get(sensorName);
     }
 
-    @Data
-    @Builder
-    public static class SensorStats {
-        private double mean;  // Текущее среднее значение давления
-        private double variance; // Накопленная дисперсия
-        private int count; // Количество учтенных измерений
-        private double cusum; // Текущее значение кумулятивной суммы отклонений
-    }
-
     public enum FilterType {
         MOVING_AVERAGE,
         MEDIAN;
@@ -248,5 +241,14 @@ public class PressureAnalyzer {
             }
             return Optional.empty();
         }
+    }
+
+    @Data
+    @Builder
+    public static class SensorStats {
+        private double mean;  // Текущее среднее значение давления
+        private double variance; // Накопленная дисперсия
+        private int count; // Количество учтенных измерений
+        private double cusum; // Текущее значение кумулятивной суммы отклонений
     }
 }
