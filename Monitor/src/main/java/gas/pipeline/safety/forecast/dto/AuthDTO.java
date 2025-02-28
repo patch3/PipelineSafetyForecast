@@ -4,11 +4,11 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
+import lombok.AllArgsConstructor;
 import lombok.Data;
 
 @Data
 public class AuthDTO {
-
     @NotBlank(message = "Имя пользователя не может быть пустым")
     @Pattern(regexp = "^[a-zA-Z0-9_]+$", message = "Имя пользователя может содержать только буквы, цифры и символы подчеркивания")
     @Size(min = 3, max = 20, message = "Имя пользователя должно содержать от 3 до 20 символов")
@@ -22,4 +22,10 @@ public class AuthDTO {
     @Pattern(regexp = "^(?=.*[0-9])(?=.*[a-zA-Z])(?=.*[!@#$%^&*])[^\\s]+$", message = "Пароль должен содержать буквы, цифры и специальные символы")
     @Size(min = 8, max = 25, message = "Пароль должен содержать от 8 до 25 символов")
     private String password;
+
+    public AuthDTO() {
+        username = "";
+        email = "";
+        password = "";
+    }
 }

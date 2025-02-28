@@ -28,6 +28,4 @@ public class EmployeeDetailedServiceImpl implements UserDetailsService {
                 .password(employee.getPassword())
                 .build();
     }
-
-
 }

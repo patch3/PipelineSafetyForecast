@@ -11,6 +11,5 @@ public class StringToFilterTypeConverter implements Converter<String, PressureAn
     public PressureAnalyzer.FilterType convert(@Nullable String source) {
         return PressureAnalyzer.FilterType.fromString(source)
                 .orElseThrow(() -> new IllegalArgumentException("Invalid filter type: " + source));
-
     }
 }

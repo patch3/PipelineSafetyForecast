@@ -17,15 +17,15 @@
         </div>
         <div>
             <label for="username">Имя пользователя:</label>
-            <input id="username" name="username" placeholder="Введите имя пользователя" required type="text"/>
+            <input id="username" name="username" placeholder="Введите имя пользователя" required type="text" th:value="${form.getUsername()}"/>
         </div>
         <div>
             <label for="email">Email:</label>
-            <input id="email" name="email" placeholder="Введите email" required type="email"/>
+            <input id="email" name="email" placeholder="Введите email" required type="email" th:value="${form.getEmail()}"/>
         </div>
         <div>
             <label for="password">Пароль:</label>
-            <input id="password" name="password" placeholder="Введите пароль" required type="password"/>
+            <input id="password" name="password" placeholder="Введите пароль" required type="password" th:value="${form.getPassword()}"/>
         </div>
         <div>
             <label for="confirmPassword">Подтвердите пароль:</label>

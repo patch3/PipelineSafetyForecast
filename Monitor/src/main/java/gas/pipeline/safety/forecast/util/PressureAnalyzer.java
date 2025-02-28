@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.val;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 
 /**
@@ -43,8 +44,8 @@ public class PressureAnalyzer {
         this.NUM_CALIBRATION_RECORDS = numCalibrationRecords;
         this.FILTER_WINDOW = filterWindow;
         this.FILTER_TYPE = filterType;
-        this.sensorStats = new HashMap<>();
-        this.sensorMeasurements = new HashMap<>();
+        this.sensorStats = new ConcurrentHashMap<>();
+        this.sensorMeasurements = new ConcurrentHashMap<>();
     }
 
     public PressureAnalyzer(PressureAnalyzer copy) {
@@ -53,8 +54,8 @@ public class PressureAnalyzer {
         this.NUM_CALIBRATION_RECORDS = copy.NUM_CALIBRATION_RECORDS;
         this.FILTER_WINDOW = copy.FILTER_WINDOW;
         this.FILTER_TYPE = copy.FILTER_TYPE;
-        this.sensorStats = new HashMap<>(copy.sensorStats);
-        this.sensorMeasurements = new HashMap<>(copy.sensorMeasurements);
+        this.sensorStats = new ConcurrentHashMap<>(copy.sensorStats);
+        this.sensorMeasurements = new ConcurrentHashMap<>(copy.sensorMeasurements);
     }
 
     /**
@@ -108,10 +109,9 @@ public class PressureAnalyzer {
         val newMean = stats.getMean() + delta / newCount;
         val newDelta = value - newMean;
 
-        val newVariance = ((stats.getVariance() * (stats.getCount() - 1)) + delta * newDelta) / newCount;
-
         stats.setMean(newMean);
-        stats.setVariance(newVariance);
+        // Обновление дисперсии методом Welford
+        stats.setVariance(stats.getVariance() + delta * newDelta);
         stats.setCount(newCount);
     }
 
@@ -130,8 +130,8 @@ public class PressureAnalyzer {
         // количество сигм от среднего
         val zScore = Math.abs((value - stats.getMean()) / stdDev);
 
-        // кумулятивная сумма отклонений с "дрейфом" 0.5 сигмы
-        val cusum = Math.max(0, stats.getCusum() + (value - stats.getMean()) / stdDev - 0.5);
+        // кумулятивная сумма отклонений с "дрейфом" 1 сигмы
+        var cusum = Math.max(0, stats.getCusum() + (value - stats.getMean()) / stdDev - 1);
 
         stats.setCusum(cusum);
 

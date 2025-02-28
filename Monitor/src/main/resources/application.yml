@@ -8,8 +8,18 @@ spring:
     hibernate.ddl-auto: update
     show-sql: true
     properties.hibernate.dialect: org.hibernate.dialect.PostgreSQLDialect
+  task:
+    execution:
+      pool:
+        core-size: 8
+        max-size: 16
+        queue-capacity: 1000
+        keep-alive: 60s
+      thread-name-prefix: async-
+
 
 logging.level.org.springframework:
   security: DEBUG
   web: DEBUG
   boot.autoconfigure: DEBUG
+  scheduling.concurrent.ThreadPoolTaskExecutor: DEBUG

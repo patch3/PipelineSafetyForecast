@@ -6,6 +6,8 @@ import gas.pipeline.safety.forecast.repository.SensorReadingRepository;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.val;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -15,6 +17,7 @@ public abstract class BaseLeakService {
     protected final SensorReadingRepository sensorReadingRepo;
     protected final ModelsConfig modelsConfig;
 
+    @Async
     @PostConstruct
     protected void loadSensorReadings() {
         val trainingDay = modelsConfig.getTrainingDays();

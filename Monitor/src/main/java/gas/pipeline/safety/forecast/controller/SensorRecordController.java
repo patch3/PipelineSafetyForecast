@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.springframework.http.ResponseEntity;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.concurrent.CompletableFuture;
 
 @Slf4j
 @RestController
@@ -24,12 +26,13 @@ public class SensorRecordController {
     private final LeakPredictionsService leakPredictionsService;
     private final LeakDetectionService leakDetectionService;
 
+    @Async
     @PostMapping("/api/recording")
-    public ResponseEntity<String> recording(@RequestBody SensorDTO sensor, HttpServletRequest request) {
+    public CompletableFuture<ResponseEntity<String>> recording(@RequestBody SensorDTO sensor, HttpServletRequest request) {
         log.info("recording sensorId: {}, pressure: {}", sensor.getSensorId(), sensor.getPressure());
         val timestamp = request.getHeader("X-Request-Timestamp");
         if (timestamp == null) {
-            return ResponseEntity.badRequest().body("X-Request-Timestamp is null");
+            return CompletableFuture.completedFuture(ResponseEntity.badRequest().body("X-Request-Timestamp is null"));
         }
         try {
             val clientTime = LocalDateTime.parse(
@@ -45,10 +48,10 @@ public class SensorRecordController {
             val responseMassage = reading.isLeak()
                     ? "Leak detected! Sensor: " + sensor.getSensorId()
                     : "Request processed successfully";
-            return ResponseEntity.ok(responseMassage);
+            return CompletableFuture.completedFuture(ResponseEntity.ok(responseMassage));
         } catch (DateTimeParseException ex) {
             log.warn("X-Request-Timestamp is invalid: {}", timestamp);
-            return ResponseEntity.badRequest().body(ex.getMessage());
+            return CompletableFuture.completedFuture(ResponseEntity.badRequest().body(ex.getMessage()));
         }
     }
 }

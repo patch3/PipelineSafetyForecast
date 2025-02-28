@@ -3,8 +3,8 @@ package gas.pipeline.safety.forecast.util;
 import lombok.val;
 import org.apache.commons.math3.distribution.NormalDistribution;
 
-import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Модель для байесовского прогнозирования утечек в газопроводах.
@@ -25,23 +25,23 @@ public class BayesianLeakModel {
     private final Map<String, Long> leakCount;
 
     public BayesianLeakModel() {
-        this.leakProbabilities = new HashMap<>();
-        this.leakMean          = new HashMap<>();
-        this.normalMean        = new HashMap<>();
-        this.normalVariance    = new HashMap<>();
-        this.normalCount       = new HashMap<>();
-        this.leakVariance      = new HashMap<>();
-        this.leakCount         = new HashMap<>();
+        this.leakProbabilities = new ConcurrentHashMap<>();
+        this.leakMean          = new ConcurrentHashMap<>();
+        this.normalMean        = new ConcurrentHashMap<>();
+        this.normalVariance    = new ConcurrentHashMap<>();
+        this.normalCount       = new ConcurrentHashMap<>();
+        this.leakVariance      = new ConcurrentHashMap<>();
+        this.leakCount         = new ConcurrentHashMap<>();
     }
 
     public BayesianLeakModel(BayesianLeakModel copy) {
-        this.leakProbabilities = new HashMap<>(copy.leakProbabilities);
-        this.normalMean        = new HashMap<>(copy.normalMean);
-        this.normalVariance    = new HashMap<>(copy.normalVariance);
-        this.normalCount       = new HashMap<>(copy.normalCount);
-        this.leakMean          = new HashMap<>(copy.leakMean);
-        this.leakVariance      = new HashMap<>(copy.leakVariance);
-        this.leakCount         = new HashMap<>(copy.leakCount);
+        this.leakProbabilities = new ConcurrentHashMap<>(copy.leakProbabilities);
+        this.normalMean        = new ConcurrentHashMap<>(copy.normalMean);
+        this.normalVariance    = new ConcurrentHashMap<>(copy.normalVariance);
+        this.normalCount       = new ConcurrentHashMap<>(copy.normalCount);
+        this.leakMean          = new ConcurrentHashMap<>(copy.leakMean);
+        this.leakVariance      = new ConcurrentHashMap<>(copy.leakVariance);
+        this.leakCount         = new ConcurrentHashMap<>(copy.leakCount);
     }
 
     /**
@@ -68,7 +68,7 @@ public class BayesianLeakModel {
         );
         val likelihoodNormal = calculateGaussianLikelihood(
                 pressure,
-                normalMean.getOrDefault(sensorName, 0.8), // базовое давление в норме
+                normalMean.getOrDefault(sensorName, 0.8),
                 normalVariance.getOrDefault(sensorName, 1.0)
         );
 
@@ -136,9 +136,9 @@ public class BayesianLeakModel {
         // Требуется минимум 2 наблюдения для обеих статистик
         if (leakCount.getOrDefault(sensorName, 0L) < 2
                 || normalCount.getOrDefault(sensorName, 0L) < 2) {
-            return 0.0; // Недостаточно данных для надежной оценки
+            return 0.01; // Недостаточно данных для надежной оценки
         }
-        return leakProbabilities.getOrDefault(sensorName, 0.0);
+        return leakProbabilities.getOrDefault(sensorName, 0.01);
     }
 
     /**

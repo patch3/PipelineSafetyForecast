@@ -28,7 +28,8 @@ public class LeakPredictionsService extends BaseLeakService {
 
     @Autowired
     public LeakPredictionsService(SensorReadingRepository sensorReadingRepo,
-                                  BayesianLeakModel leakModel, PressureAnalyzer pressureAnalyzer,
+                                  BayesianLeakModel leakModel,
+                                  PressureAnalyzer pressureAnalyzer,
                                   ModelsConfig modelsConfig) {
         super(sensorReadingRepo, modelsConfig);
 
@@ -49,16 +50,12 @@ public class LeakPredictionsService extends BaseLeakService {
                         reading.getPressure()
                 )
         );
-        //generatePredictions(sensorId);
         checkAlerts(sensorId);
     }
 
 
     public void processNewReadings(SensorReading reading) {
-        //sensorReadingRepo.save(reading);
         leakModel.update(reading.getSensor().getName(), reading.isLeak(), reading.getPressure());
-
-        //generatePredictions(reading.getSensorId());
         checkAlerts(reading.getSensor().getName());
     }
 
@@ -80,7 +77,6 @@ public class LeakPredictionsService extends BaseLeakService {
         var frequency = calculateFrequency(sensorName);
         frequency = frequency > 0 ? frequency : defaultAverageFrequency; // Используем значение по умолчанию
 
-
         val intervalMinutes = (long) (1440L / frequency);
         val totalPredictions = (int) (defaultPredictionsDays * frequency);
 
@@ -91,7 +87,7 @@ public class LeakPredictionsService extends BaseLeakService {
             // прогноз давления с учетом тренда
             val predictedPressure = forecastPressureModel.predictNextPressure(sensorName);
 
-            // Обновляем модель-копию прогнозируемым давлением (без реальной утечки)
+            // Обновляем модель-копию прогнозируемым давлением на основе предполагаемых данных
             forecastBayesianModel.update(sensorName, false, predictedPressure);
 
             // Получаем вероятность из обновленной копии

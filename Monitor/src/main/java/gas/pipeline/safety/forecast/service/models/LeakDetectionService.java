@@ -10,6 +10,7 @@ import gas.pipeline.safety.forecast.util.PressureAnalyzer;
 import lombok.val;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -41,13 +42,10 @@ public class LeakDetectionService extends BaseLeakService {
                 );
     }
 
-
     public SensorReading processSensorReading(String sensorName, double pressure, LocalDateTime timestamp) {
-        val sensor = sensorRepository.findByName(sensorName).orElseGet(() -> {
-            val newSensor = new Sensor(sensorName);
-            return sensorRepository.save(newSensor);
-        });
-
+        val sensor = sensorRepository.findByName(sensorName).orElseGet(() ->
+                sensorRepository.save(new Sensor(sensorName))
+        );
         val isLeak = pressureAnalyzer.analyzePressure(sensorName, pressure);
         val reading = new SensorReading(sensor, pressure, isLeak, timestamp);
         return sensorReadingRepo.save(reading);
