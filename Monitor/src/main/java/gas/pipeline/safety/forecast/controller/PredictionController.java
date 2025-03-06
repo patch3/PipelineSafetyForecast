@@ -12,7 +12,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 @Controller
 public class PredictionController {
@@ -34,8 +33,7 @@ public class PredictionController {
             String sensorName,
             Model model
     ) throws JsonProcessingException {
-        Map<String, List<LeakPredictionsService.LeakPrediction>> sensorsPredictions = new HashMap<>();
-
+        val sensorsPredictions = new HashMap<String, List<LeakPredictionsService.LeakPrediction>>();
         if (sensorName == null) {
             val sensors = sensorRepository.findAllSensorNames();
             sensors.forEach(sensor ->

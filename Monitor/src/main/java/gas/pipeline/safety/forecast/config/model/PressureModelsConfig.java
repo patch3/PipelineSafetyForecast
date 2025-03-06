@@ -1,6 +1,6 @@
-package gas.pipeline.safety.forecast.config;
+package gas.pipeline.safety.forecast.config.model;
 
-import gas.pipeline.safety.forecast.util.PressureAnalyzer;
+import gas.pipeline.safety.forecast.util.AnomalyAnalyzer;
 import lombok.Getter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -9,28 +9,31 @@ import org.springframework.context.annotation.PropertySource;
 
 @Getter
 @Configuration
-@PropertySource(value = "classpath:config/model.properties")
+@PropertySource(value = "classpath:config/pressure.properties")
 public class PressureModelsConfig {
-    @Value("${pressure.cusum.threshold:30}")
+    @Value("${cusum.threshold:30}")
     private Double cusumThreshold;
-    @Value("${pressure.leak.threshold:7}")
+    @Value("${leak.threshold:7}")
     private Double leakThreshold;
-    @Value("${pressure.calibration.records:30}")
+    @Value("${decay.factor:0.3}")
+    private Double decayFactor;
+    @Value("${calibration.records:30}")
     private Integer calibrationRecords;
-    @Value("${pressure.moving.average.window:10}")
+    @Value("${moving.average.window:10}")
     private Integer filterWindow;
-    @Value("${pressure.filter.type:median}")
-    private PressureAnalyzer.FilterType filterType;
+    @Value("${filter.type:median}")
+    private AnomalyAnalyzer.FilterMode filterMode;
 
 
     @Bean
-    public PressureAnalyzer pressureAnalyzer() {
-        return new PressureAnalyzer(
+    public AnomalyAnalyzer pressureAnalyzer() {
+        return new AnomalyAnalyzer(
                 cusumThreshold,
                 leakThreshold,
+                decayFactor,
                 calibrationRecords,
                 filterWindow,
-                filterType
+                filterMode
         );
     }
 }

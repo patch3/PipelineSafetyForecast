@@ -5,7 +5,6 @@ import gas.pipeline.safety.forecast.service.RegistrationService;
 import jakarta.validation.Valid;
 import lombok.val;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -23,7 +22,6 @@ public class AuthController {
         this.registrationService = registrationService;
     }
 
-    @Async
     @GetMapping("/login")
     public String login(
             @RequestParam(value = "error", required = false) String error,
@@ -67,7 +65,7 @@ public class AuthController {
 
             return "registration";
         }
-        val isRegist =  registrationService.registerUser(dto.getUsername(), dto.getEmail(), dto.getPassword());
+        val isRegist = registrationService.registerUser(dto.getUsername(), dto.getEmail(), dto.getPassword());
         if (!isRegist) {
             model.addAttribute("errors", "Пользователь c такими данными уже зарегистрирован");
             model.addAttribute("form", dto);

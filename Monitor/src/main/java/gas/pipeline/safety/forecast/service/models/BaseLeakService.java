@@ -1,13 +1,12 @@
 package gas.pipeline.safety.forecast.service.models;
 
-import gas.pipeline.safety.forecast.config.ModelsConfig;
+import gas.pipeline.safety.forecast.config.model.ModelsConfig;
 import gas.pipeline.safety.forecast.model.sensor.SensorReading;
 import gas.pipeline.safety.forecast.repository.SensorReadingRepository;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.val;
 import org.springframework.scheduling.annotation.Async;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;

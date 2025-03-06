@@ -1,15 +1,19 @@
 package gas.pipeline.safety.forecast.core.converter;
 
-import gas.pipeline.safety.forecast.util.PressureAnalyzer;
-import jakarta.annotation.Nullable;
+import gas.pipeline.safety.forecast.util.Analyzer;
+import gas.pipeline.safety.forecast.util.AnomalyAnalyzer;
+import lombok.NonNull;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.stereotype.Component;
 
 @Component
-public class StringToFilterTypeConverter implements Converter<String, PressureAnalyzer.FilterType> {
+public class StringToFilterTypeConverter implements Converter<String, Analyzer.Mode> {
     @Override
-    public PressureAnalyzer.FilterType convert(@Nullable String source) {
-        return PressureAnalyzer.FilterType.fromString(source)
-                .orElseThrow(() -> new IllegalArgumentException("Invalid filter type: " + source));
+    public Analyzer.Mode convert(@NonNull String source) {
+        try {
+            return AnomalyAnalyzer.FilterMode.valueOf(source.toUpperCase());
+        } catch (IllegalArgumentException ex) {
+            throw new IllegalArgumentException("Invalid filter type: " + source);
+        }
     }
 }

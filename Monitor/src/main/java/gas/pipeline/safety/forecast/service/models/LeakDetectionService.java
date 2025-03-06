@@ -1,32 +1,31 @@
 package gas.pipeline.safety.forecast.service.models;
 
 
-import gas.pipeline.safety.forecast.config.ModelsConfig;
+import gas.pipeline.safety.forecast.config.model.ModelsConfig;
 import gas.pipeline.safety.forecast.model.sensor.Sensor;
 import gas.pipeline.safety.forecast.model.sensor.SensorReading;
 import gas.pipeline.safety.forecast.repository.SensorReadingRepository;
 import gas.pipeline.safety.forecast.repository.SensorRepository;
-import gas.pipeline.safety.forecast.util.PressureAnalyzer;
+import gas.pipeline.safety.forecast.util.AnomalyAnalyzer;
 import lombok.val;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
 public class LeakDetectionService extends BaseLeakService {
-    private final PressureAnalyzer pressureAnalyzer;
+    private final AnomalyAnalyzer anomalyAnalyzer;
     private final SensorRepository sensorRepository;
 
     @Autowired
     public LeakDetectionService(SensorReadingRepository sensorReadingRepository,
                                 ModelsConfig modelsConfig,
-                                PressureAnalyzer pressureAnalyzer,
+                                AnomalyAnalyzer anomalyAnalyzer,
                                 SensorRepository sensorRepository) {
         super(sensorReadingRepository, modelsConfig);
-        this.pressureAnalyzer = pressureAnalyzer;
+        this.anomalyAnalyzer = anomalyAnalyzer;
         this.sensorRepository = sensorRepository;
     }
 
@@ -35,7 +34,7 @@ public class LeakDetectionService extends BaseLeakService {
         date.stream()
                 .filter(reading -> !reading.isLeak())
                 .forEach(reading ->
-                        pressureAnalyzer.analyzePressure(
+                        anomalyAnalyzer.analyzePressure(
                                 reading.getSensor().getName(),
                                 reading.getPressure()
                         )
@@ -46,7 +45,7 @@ public class LeakDetectionService extends BaseLeakService {
         val sensor = sensorRepository.findByName(sensorName).orElseGet(() ->
                 sensorRepository.save(new Sensor(sensorName))
         );
-        val isLeak = pressureAnalyzer.analyzePressure(sensorName, pressure);
+        val isLeak = anomalyAnalyzer.analyzePressure(sensorName, pressure);
         val reading = new SensorReading(sensor, pressure, isLeak, timestamp);
         return sensorReadingRepo.save(reading);
     }
