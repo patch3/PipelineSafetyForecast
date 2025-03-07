@@ -4,10 +4,15 @@ import gas.pipeline.safety.forecast.util.model.AnomalyModel;
 import gas.pipeline.safety.forecast.util.model.Stat;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
+import org.apache.commons.math3.optim.MaxEval;
+import org.apache.commons.math3.optim.nonlinear.scalar.GoalType;
+import org.apache.commons.math3.optim.nonlinear.scalar.ObjectiveFunction;
+import org.apache.commons.math3.optim.nonlinear.scalar.noderiv.NelderMeadSimplex;
+import org.apache.commons.math3.optim.nonlinear.scalar.noderiv.SimplexOptimizer;
+import org.apache.commons.math3.stat.regression.OLSMultipleLinearRegression;
+import org.apache.commons.math3.util.FastMath;
 
-import java.util.ArrayList;
-import java.util.Map;
-import java.util.PriorityQueue;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
@@ -36,9 +41,14 @@ public class AnomalyAnalyzer extends Analyzer<AnomalyModel> implements IAnomaly 
     private final FilterMode FILTER_TYPE;
 
 
+    private final int ARIMA_P;
+    private final int ARIMA_D;
+    private final int ARIMA_Q;
+
+
     public AnomalyAnalyzer() {
         this(7.0, 4.0, 0.9, 20, 10,
-                FilterMode.MOVING_AVERAGE, UpdateMode.EXPONENTIAL, new ConcurrentHashMap<>());
+                FilterMode.MOVING_AVERAGE, UpdateMode.EXPONENTIAL, new ConcurrentHashMap<>(), 1, 1, 1);
     }
 
     public AnomalyAnalyzer(double cusumThreshold,
@@ -48,7 +58,10 @@ public class AnomalyAnalyzer extends Analyzer<AnomalyModel> implements IAnomaly 
                            int filterWindow,
                            FilterMode filterMode,
                            UpdateMode updateMode,
-                           Map<String, AnomalyModel> sensorStats) {
+                           Map<String, AnomalyModel> sensorStats,
+                           int arimaP,
+                           int arimaD,
+                           int arimaA) {
         super(updateMode, sensorStats);
         this.CUSUM_THRESHOLD = cusumThreshold;
         this.LEAK_THRESHOLD = leakThreshold;
@@ -56,6 +69,9 @@ public class AnomalyAnalyzer extends Analyzer<AnomalyModel> implements IAnomaly 
         this.NUM_CALIBRATION_RECORDS = numCalibrationRecords;
         this.FILTER_WINDOW = filterWindow;
         this.FILTER_TYPE = filterMode;
+        this.ARIMA_P = arimaP;
+        this.ARIMA_D = arimaD;
+        this.ARIMA_Q = arimaA;
     }
 
     public AnomalyAnalyzer(double cusumThreshold,
@@ -73,7 +89,8 @@ public class AnomalyAnalyzer extends Analyzer<AnomalyModel> implements IAnomaly 
                 filterWindow,
                 filterMode,
                 updateMode,
-                new ConcurrentHashMap<>()
+                new ConcurrentHashMap<>(),
+                1,1,1
         );
     }
 
@@ -90,7 +107,10 @@ public class AnomalyAnalyzer extends Analyzer<AnomalyModel> implements IAnomaly 
                         .collect(Collectors.toMap(
                                 Map.Entry::getKey,
                                 e -> new AnomalyModel(e.getValue())
-                        ))
+                        )),
+                copy.ARIMA_P,
+                copy.ARIMA_D,
+                copy.ARIMA_Q
         );
     }
 
@@ -126,7 +146,8 @@ public class AnomalyAnalyzer extends Analyzer<AnomalyModel> implements IAnomaly 
                             .count(0)
                             .build(),
                     DEFAULT_CUSUM,
-                    FILTER_WINDOW
+                    FILTER_WINDOW,
+                    ARIMA_Q
             );
             sensorModels.put(sensorName, model);
         }
@@ -235,7 +256,6 @@ public class AnomalyAnalyzer extends Analyzer<AnomalyModel> implements IAnomaly 
      * Сглаживание по медиане
      */
     protected double applyMedianFilter(AnomalyModel model, double value) {
-        // Добавление нового элемента
         model.measurements.add(value);
 
         if (model.maxHeap.isEmpty() || value <= model.maxHeap.peek()) {
@@ -294,6 +314,33 @@ public class AnomalyAnalyzer extends Analyzer<AnomalyModel> implements IAnomaly 
      */
     @Override
     public double predictNextPressure(AnomalyModel model) {
+        if (model == null || model.stat == null || model.measurements.isEmpty()) {
+            return model != null && model.stat != null ? model.stat.mean : 0.0;
+        }
+
+        val series = model.measurements.stream()
+                .mapToDouble(Double::doubleValue)
+                .toArray();
+
+        try {
+            val diffSeries = difference(series, ARIMA_D);
+            var forecast = arimaForecast(diffSeries, ARIMA_P, ARIMA_Q, model);
+            forecast = integrateForecast(forecast, series, ARIMA_D);
+
+            // Сохраните ошибку для MA
+            val error = diffSeries[diffSeries.length - 1] - forecast;
+            model.maErrors.addLast(error);
+            if (model.maErrors.size() > ARIMA_Q) {
+                model.maErrors.removeFirst();
+            }
+            return FastMath.max(forecast, 0.0);
+        } catch (Exception e) {
+            log.error("Ошибка прогноза ARIMA: {}", e.getMessage());
+            return model.stat.mean;
+        }
+    }
+    /*@Override
+    public double predictNextPressure(AnomalyModel model) {
         if (model == null || model.stat == null) {
             return 0.0;
         } else if (model.stat.count < NUM_CALIBRATION_RECORDS) {
@@ -330,7 +377,97 @@ public class AnomalyAnalyzer extends Analyzer<AnomalyModel> implements IAnomaly 
 
         log.info("Прогноз давления для: slope={}, predicted={}", slope, predicted);
         return predicted;
+    }*/
+
+    /**
+     * Дифференцирование временного ряда
+     */
+    private double[] difference(double[] series, int d) {
+        var diff = series.clone();
+        for (int i = 0; i < d; i++) {
+            val temp = new double[diff.length - 1];
+            for (int j = 0; j < temp.length; j++) {
+                temp[j] = diff[j + 1] - diff[j];
+            }
+            diff = temp;
+        }
+        return diff;
     }
+
+    /**
+     * Прогнозирование с использованием ARMA модели
+     */
+    private double arimaForecast(double[] series, int p, int q, AnomalyModel model) {
+        if (series.length < p + q + 10) {
+            throw new IllegalArgumentException("Недостаточно данных для прогноза");
+        }
+
+        // 1. Рассчитайте AR-часть
+        val regression = new OLSMultipleLinearRegression();
+        val y = Arrays.copyOfRange(series, p, series.length);
+        val x = new double[y.length][p];
+        for (int i = 0; i < y.length; i++) {
+            System.arraycopy(series, i, x[i], 0, p);
+        }
+        regression.newSampleData(y, x);
+        val beta = regression.estimateRegressionParameters();
+
+        var arForecast = 0.0;
+        for (int j = 0; j < p; j++) {
+            arForecast += beta[j + 1] * series[series.length - p + j];
+        }
+
+        // 2. MA-часть (история ошибок)
+        var maComponent = 0.0;
+        if (q > 0 && !model.maErrors.isEmpty()) {
+            val maCoefficients = estimateMACoefficients(model); // Оптимизация коэффициентов
+            var errorIdx = 0;
+            for (Double error : model.maErrors) {
+                if (errorIdx >= q) break;
+                maComponent += maCoefficients[errorIdx] * error;
+                errorIdx++;
+            }
+        }
+        return arForecast + maComponent;
+    }
+
+    // Оптимизация коэффициентов MA через Nelder-Mead
+    // Обновленный метод оценки MA-коэффициентов
+    private double[] estimateMACoefficients(AnomalyModel model) {
+        val optimizer = new SimplexOptimizer(1e-10, 1e-30);
+        val initialGuess = new double[model.arimaQ]; // Начальные значения (например, 0.1)
+        val solution = optimizer.optimize(
+                new MaxEval(1000),
+                new ObjectiveFunction(coeffs -> {
+                    var sumSquared = 0.0;
+                    val errors = new ArrayList<>(model.maErrors);
+                    for (int t = model.arimaQ; t < errors.size(); t++) {
+                        var maPrediction = 0.0;
+                        for (int i = 0; i < model.arimaQ; i++) {
+                            maPrediction += coeffs[i] * errors.get(t - i - 1);
+                        }
+                        sumSquared += Math.pow(errors.get(t) - maPrediction, 2);
+                    }
+                    return sumSquared;
+                }),
+                GoalType.MINIMIZE,
+                new NelderMeadSimplex(initialGuess)
+        );
+        return solution.getPoint();
+    }
+
+    /**
+     * Интегрирование прогноза
+     */
+    private double integrateForecast(double forecast, double[] originalSeries, int d) {
+        val integrated = new double[d + 1];
+        integrated[0] = forecast;
+        for (int i = 1; i <= d; i++) {
+            integrated[i] = integrated[i - 1] + originalSeries[originalSeries.length - i];
+        }
+        return integrated[d];
+    }
+
 
     /**
      * Линейная регрессия

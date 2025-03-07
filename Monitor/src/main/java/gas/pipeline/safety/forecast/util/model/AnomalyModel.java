@@ -20,33 +20,54 @@ public class AnomalyModel extends Model {
     public final PriorityQueue<Double> minHeap;
     public final Map<Double, Integer> expired;
 
+    public final ArrayDeque<Double> maErrors;
+    public final int arimaQ;
+
+
 
     public AnomalyModel() {
-        this(new Stat(), DEFAULT_CUSUM, new ArrayDeque<>(), new PriorityQueue<>(), new PriorityQueue<>(), new LinkedHashMap<>());
+        this(new Stat(),
+                DEFAULT_CUSUM,
+                new ArrayDeque<>(),
+                new PriorityQueue<>(),
+                new PriorityQueue<>(),
+                new LinkedHashMap<>(),
+                new ArrayDeque<>(11),
+                10
+        );
     }
 
-    public AnomalyModel(Stat stat, double cusum, int sizeWindow) {
+    public AnomalyModel(Stat stat, double cusum, int sizeWindow, int arimaQ) {
         this(
                 stat, cusum,
                 new ArrayDeque<>(sizeWindow + 1),
                 new PriorityQueue<>(sizeWindow / 2 + 1, Comparator.reverseOrder()),
                 new PriorityQueue<>(sizeWindow / 2 + 1),
-                new LinkedHashMap<>(sizeWindow, 0.75f, true)
+                new LinkedHashMap<>(sizeWindow, 0.75f, true),
+                new ArrayDeque<>(11),
+                10
         );
     }
 
-    public AnomalyModel(double mean, double variance, int count, double cusum, int sizeMeasurement) {
-        this(new Stat(mean, variance, count), cusum, sizeMeasurement);
+    public AnomalyModel(double mean,
+                        double variance,
+                        int count,
+                        double cusum,
+                        int sizeMeasurement,
+                        int arimaQ) {
+        this(new Stat(mean, variance, count), cusum, sizeMeasurement, arimaQ);
     }
 
     public AnomalyModel(AnomalyModel copy) {
         this(
                 copy.stat,
                 copy.cusum,
-                new ArrayDeque<>(copy.measurements),
-                new PriorityQueue<>(copy.maxHeap),
-                new PriorityQueue<>(copy.minHeap),
-                new LinkedHashMap<>(copy.expired)
+                copy.measurements,
+                copy.maxHeap,
+                copy.minHeap,
+                copy.expired,
+                copy.maErrors,
+                copy.arimaQ
         );
     }
 
