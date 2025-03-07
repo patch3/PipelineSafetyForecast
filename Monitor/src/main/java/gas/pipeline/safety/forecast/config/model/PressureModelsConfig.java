@@ -1,6 +1,7 @@
 package gas.pipeline.safety.forecast.config.model;
 
-import gas.pipeline.safety.forecast.util.AnomalyAnalyzer;
+import gas.pipeline.safety.forecast.util.analyzer.AnomalyAnalyzer;
+import gas.pipeline.safety.forecast.util.analyzer.IAnomaly;
 import lombok.Getter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -11,6 +12,7 @@ import org.springframework.context.annotation.PropertySource;
 @Configuration
 @PropertySource(value = "classpath:config/pressure.properties")
 public class PressureModelsConfig {
+    private final ModelsConfig modelsConfig;
     @Value("${cusum.threshold:30}")
     private Double cusumThreshold;
     @Value("${leak.threshold:7}")
@@ -24,16 +26,21 @@ public class PressureModelsConfig {
     @Value("${filter.type:median}")
     private AnomalyAnalyzer.FilterMode filterMode;
 
+    public PressureModelsConfig(ModelsConfig modelsConfig) {
+        this.modelsConfig = modelsConfig;
+    }
+
 
     @Bean
-    public AnomalyAnalyzer pressureAnalyzer() {
+    public IAnomaly pressureAnalyzer() {
         return new AnomalyAnalyzer(
                 cusumThreshold,
                 leakThreshold,
                 decayFactor,
                 calibrationRecords,
                 filterWindow,
-                filterMode
+                filterMode,
+                modelsConfig.getUpdateMode()
         );
     }
 }

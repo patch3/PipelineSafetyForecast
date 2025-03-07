@@ -13,16 +13,12 @@ public class AnomalyModel extends Model {
     public static final double DEFAULT_CUSUM = 0.5;
 
     public Stat stat;
-    /*    public double mean;  // Текущее среднее значение давления
-        public double variance; // Накопленная дисперсия
-        public int count; // Количество учтенных измерений*/
     public double cusum; // Текущее значение кумулятивной суммы отклонений
 
     public final ArrayDeque<Double> measurements;
     public final PriorityQueue<Double> maxHeap;
     public final PriorityQueue<Double> minHeap;
     public final Map<Double, Integer> expired;
-
 
 
     public AnomalyModel() {

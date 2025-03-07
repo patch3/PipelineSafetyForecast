@@ -3,10 +3,11 @@ package gas.pipeline.safety.forecast.service.models;
 import gas.pipeline.safety.forecast.config.model.ModelsConfig;
 import gas.pipeline.safety.forecast.model.sensor.SensorReading;
 import gas.pipeline.safety.forecast.repository.SensorReadingRepository;
-import gas.pipeline.safety.forecast.util.AnomalyAnalyzer;
-import gas.pipeline.safety.forecast.util.BayesianTheorem;
-import gas.pipeline.safety.forecast.util.model.AnomalyModel;
-import gas.pipeline.safety.forecast.util.model.BayesianModel;
+import gas.pipeline.safety.forecast.util.analyzer.AnomalyAnalyzer;
+import gas.pipeline.safety.forecast.util.analyzer.BayesianTheorem;
+import gas.pipeline.safety.forecast.util.analyzer.IAnomaly;
+import gas.pipeline.safety.forecast.util.analyzer.IProbability;
+import gas.pipeline.safety.forecast.util.model.ProbabilityModel;
 import lombok.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,8 +21,8 @@ import java.util.List;
 @Slf4j
 @Service
 public class LeakPredictionsService extends BaseLeakService {
-    private final BayesianTheorem leakModel;
-    private final AnomalyAnalyzer anomalyAnalyzer;
+    private final IProbability leakModel;
+    private final IAnomaly anomalyAnalyzer;
 
     private final int defaultTrainingDays;
     private final int defaultPredictionsDays;
@@ -30,8 +31,8 @@ public class LeakPredictionsService extends BaseLeakService {
 
     @Autowired
     public LeakPredictionsService(SensorReadingRepository sensorReadingRepo,
-                                  BayesianTheorem leakModel,
-                                  AnomalyAnalyzer anomalyAnalyzer,
+                                  IProbability leakModel,
+                                  IAnomaly anomalyAnalyzer,
                                   ModelsConfig modelsConfig) {
         super(sensorReadingRepo, modelsConfig);
 
@@ -128,7 +129,7 @@ public class LeakPredictionsService extends BaseLeakService {
     }
 
 
-    private void checkAlerts(BayesianModel model) {
+    private void checkAlerts(ProbabilityModel model) {
         val prob = model.getLeakProbability();
         if (prob > 0.7) {
             log.warn("Leak prediction probability is higher than {}", prob);

@@ -1,11 +1,8 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org" lang="ru">
 <head>
     <title>Прогнозы утечек</title>
-    <link href="/styles/predictions.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/luxon@3.3.0"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@1.3.1"></script>
+    <link th:href="@{/styles/predictions.css}" rel="stylesheet">
 </head>
 <body>
 <div class="container">
@@ -18,6 +15,10 @@
 
     <div id="charts-container"></div>
 </div>
+
+<script th:src="@{/scripts/lib/chart.js}"></script>
+<script th:src="@{/scripts/lib/luxon.js}"></script>
+<script th:src="@{/scripts/lib/chartjs-adapter-luxon.js}"></script>
 <script th:inline="javascript">
     document.addEventListener('DOMContentLoaded', function () {
         const predictionsData = JSON.parse(/*[[${predictions}]]*/ '{}');

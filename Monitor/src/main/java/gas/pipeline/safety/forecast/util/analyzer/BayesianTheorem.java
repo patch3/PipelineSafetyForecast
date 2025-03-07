@@ -1,6 +1,6 @@
-package gas.pipeline.safety.forecast.util;
+package gas.pipeline.safety.forecast.util.analyzer;
 
-import gas.pipeline.safety.forecast.util.model.BayesianModel;
+import gas.pipeline.safety.forecast.util.model.ProbabilityModel;
 import gas.pipeline.safety.forecast.util.model.Stat;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
@@ -10,7 +10,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
-import static gas.pipeline.safety.forecast.util.model.BayesianModel.DEFAULT_PROBABILITY;
+import static gas.pipeline.safety.forecast.util.model.ProbabilityModel.DEFAULT_PROBABILITY;
 
 /**
  * Модель для байесовского прогнозирования утечек в газопроводах.
@@ -18,7 +18,7 @@ import static gas.pipeline.safety.forecast.util.model.BayesianModel.DEFAULT_PROB
  * Обновляет статистики (среднее, дисперсию) в реальном времени и применяет формулу Байеса.
  */
 @Slf4j
-public class BayesianTheorem extends Analyzer<BayesianModel> {
+public class BayesianTheorem extends Analyzer<ProbabilityModel> implements IProbability {
     private final double LEAK_DECAY_FACTOR;
     private final double NORMAL_DECAY_FACTOR;
 
@@ -26,10 +26,14 @@ public class BayesianTheorem extends Analyzer<BayesianModel> {
     public BayesianTheorem(double LEAK_DECAY_FACTOR,
                            double NORMAL_DECAY_FACTOR,
                            UpdateMode UPDATE_MODE,
-                           Map<String, BayesianModel> model) {
+                           Map<String, ProbabilityModel> model) {
         super(UPDATE_MODE, model);
         this.LEAK_DECAY_FACTOR = LEAK_DECAY_FACTOR;
         this.NORMAL_DECAY_FACTOR = NORMAL_DECAY_FACTOR;
+    }
+
+    public BayesianTheorem() {
+        this(0.7, 0.2, UpdateMode.EXPONENTIAL);
     }
 
     public BayesianTheorem(double leakDecayFactor, double normalDecayFactor, UpdateMode updateMode) {
@@ -44,13 +48,21 @@ public class BayesianTheorem extends Analyzer<BayesianModel> {
                 copy.sensorModels.entrySet().stream()
                         .collect(Collectors.toMap(
                                 Map.Entry::getKey,
-                                e -> new BayesianModel(e.getValue()) // Глубокая копия BayesianModel
+                                e -> new ProbabilityModel(e.getValue()) // Глубокая копия BayesianModel
                         ))
         );
     }
 
-    public BayesianTheorem() {
-        this(0.7, 0.2, UpdateMode.EXPONENTIAL);
+    public BayesianTheorem(IProbability probabilityCopy) {
+        this(cast(probabilityCopy));
+    }
+
+    private static BayesianTheorem cast(IProbability probability) {
+        if (probability instanceof BayesianTheorem) {
+            return (BayesianTheorem) probability;
+        } else {
+            throw new IllegalArgumentException("BayesianTheorem can't cast to " + probability.getClass().getSimpleName());
+        }
     }
 
 
@@ -66,7 +78,7 @@ public class BayesianTheorem extends Analyzer<BayesianModel> {
 
         var model = sensorModels.get(sensorName);
         if (model == null) {
-            model = BayesianModel.builder()
+            model = ProbabilityModel.builder()
                     .leak(Stat.builder()
                             .mean(pressure)
                             .sumSquares(pressure)
@@ -109,9 +121,9 @@ public class BayesianTheorem extends Analyzer<BayesianModel> {
 
 
     /**
-     * Обновляет статистики (среднее и дисперсию) для датчика с использованием алгоритма Уэлфорда.
+     * Обновляет статистики (среднее и дисперсию) для датчика.
      */
-    private void updateStats(Stat stat, double value, boolean isArtifact) {
+    protected void updateStats(Stat stat, double value, boolean isArtifact) {
         switch (UPDATE_MODE) {
             case EXPONENTIAL -> updateExponential(stat, value, isArtifact);
             case WELFORD -> updateWelford(stat, value);
@@ -119,14 +131,10 @@ public class BayesianTheorem extends Analyzer<BayesianModel> {
     }
 
     /**
-     * Режим: Экспоненциальное сглаживание.
+     * Обновление: Экспоненциальное сглаживание.
      */
-    private void updateExponential(Stat stat, double value, boolean isArtifact) {
+    protected void updateExponential(Stat stat, double value, boolean isArtifact) {
         val decay = isArtifact ? LEAK_DECAY_FACTOR : NORMAL_DECAY_FACTOR;
-
-        if (isArtifact) {
-            val decay2 = isArtifact;
-        }
 
         stat.mean = (stat.count == 0) ? value : stat.mean + decay * (value - stat.mean);
 
@@ -139,9 +147,9 @@ public class BayesianTheorem extends Analyzer<BayesianModel> {
     }
 
     /**
-     * Режим: Алгоритм Уэлфорда.
+     * Обновление: Алгоритм Уэлфорда.
      */
-    private void updateWelford(Stat stat, double value) {
+    protected void updateWelford(Stat stat, double value) {
         val oldMean = stat.mean;
         stat.mean = oldMean + (value - oldMean) / (stat.count + 1);
 
@@ -177,10 +185,11 @@ public class BayesianTheorem extends Analyzer<BayesianModel> {
     /**
      * Вычисляет априорную вероятность утечки на основе исторических данных.
      * Сглаживание лапласа
+     *
      * @param model модель со статистикой
      * @return отношение числа утечек к общему количеству наблюдений (минимум 1%)
      */
-    private double getPrior(BayesianModel model) {
+    protected double getPrior(ProbabilityModel model) {
         val total = model.normal.count + model.leak.count;
         if (model.leak.count == 0 || total == 0) return DEFAULT_PROBABILITY;
 

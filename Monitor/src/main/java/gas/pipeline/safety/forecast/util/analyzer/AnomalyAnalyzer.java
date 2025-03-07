@@ -1,12 +1,11 @@
-package gas.pipeline.safety.forecast.util;
+package gas.pipeline.safety.forecast.util.analyzer;
 
 import gas.pipeline.safety.forecast.util.model.AnomalyModel;
 import gas.pipeline.safety.forecast.util.model.Stat;
-import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.concurrent.ConcurrentHashMap;
@@ -24,8 +23,8 @@ import static gas.pipeline.safety.forecast.util.model.AnomalyModel.DEFAULT_CUSUM
  * - Вычисляет отклонения последующих измерений от накопленной статистики.
  * - Срабатывает при превышении пороговых значений отклонения (Z-скор) или кумулятивной суммы (CUSUM).
  */
-public class AnomalyAnalyzer extends Analyzer<AnomalyModel> {
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(AnomalyAnalyzer.class);
+@Slf4j
+public class AnomalyAnalyzer extends Analyzer<AnomalyModel> implements IAnomaly {
 
     private static final double EXP_SMOOTHING_ALPHA = 0.5;
 
@@ -37,10 +36,9 @@ public class AnomalyAnalyzer extends Analyzer<AnomalyModel> {
     private final FilterMode FILTER_TYPE;
 
 
-
     public AnomalyAnalyzer() {
         this(7.0, 4.0, 0.9, 20, 10,
-                FilterMode.MOVING_AVERAGE, new ConcurrentHashMap<>());
+                FilterMode.MOVING_AVERAGE, UpdateMode.EXPONENTIAL, new ConcurrentHashMap<>());
     }
 
     public AnomalyAnalyzer(double cusumThreshold,
@@ -49,8 +47,9 @@ public class AnomalyAnalyzer extends Analyzer<AnomalyModel> {
                            int numCalibrationRecords,
                            int filterWindow,
                            FilterMode filterMode,
+                           UpdateMode updateMode,
                            Map<String, AnomalyModel> sensorStats) {
-        super(UpdateMode.EXPONENTIAL, sensorStats);
+        super(updateMode, sensorStats);
         this.CUSUM_THRESHOLD = cusumThreshold;
         this.LEAK_THRESHOLD = leakThreshold;
         this.DECAY_FACTOR = decayFactor;
@@ -64,7 +63,8 @@ public class AnomalyAnalyzer extends Analyzer<AnomalyModel> {
                            double decayFactor,
                            int numCalibrationRecords,
                            int filterWindow,
-                           FilterMode filterMode) {
+                           FilterMode filterMode,
+                           UpdateMode updateMode) {
         this(
                 cusumThreshold,
                 leakThreshold,
@@ -72,6 +72,7 @@ public class AnomalyAnalyzer extends Analyzer<AnomalyModel> {
                 numCalibrationRecords,
                 filterWindow,
                 filterMode,
+                updateMode,
                 new ConcurrentHashMap<>()
         );
     }
@@ -84,12 +85,25 @@ public class AnomalyAnalyzer extends Analyzer<AnomalyModel> {
                 copy.NUM_CALIBRATION_RECORDS,
                 copy.FILTER_WINDOW,
                 copy.FILTER_TYPE,
+                copy.UPDATE_MODE,
                 copy.sensorModels.entrySet().stream()
                         .collect(Collectors.toMap(
                                 Map.Entry::getKey,
                                 e -> new AnomalyModel(e.getValue())
                         ))
         );
+    }
+
+    public AnomalyAnalyzer(IAnomaly anomaly) {
+        this(cast(anomaly));
+    }
+
+    private static AnomalyAnalyzer cast(IAnomaly anomaly) {
+        if (anomaly instanceof AnomalyAnalyzer) {
+            return (AnomalyAnalyzer) anomaly;
+        } else {
+            throw new IllegalArgumentException("AnomalyAnalyzer can't cast to " + anomaly.getClass().getSimpleName());
+        }
     }
 
 
@@ -100,6 +114,7 @@ public class AnomalyAnalyzer extends Analyzer<AnomalyModel> {
      * @param pressure   текущее значение давления
      * @return true - обнаружена утечка, false - аномалий нет
      */
+    @Override
     public boolean analyzePressure(String sensorName, double pressure) {
         var model = sensorModels.get(sensorName);
         if (model == null) {
@@ -131,26 +146,6 @@ public class AnomalyAnalyzer extends Analyzer<AnomalyModel> {
         return isLeak;
     }
 
-    /**
-     * Обновляет статистические показатели для датчика.
-     * Используется алгоритм устойчивого вычисления среднего и дисперсии.
-     *
-     * @param stat  объект статистики датчика
-     * @param value новое значение давления
-     */
-    private void updateStats(Stat stat, double value) {
-        //val decay = isLeak ? LEAK_
-        stat.count += 1;
-        // Вычисление дельты для инкрементального среднего
-        val delta = value - stat.mean;
-        // delta * DECAY_FACTOR; // stats.getMean() + delta / newCount;
-        // stats.getMean() + adjustedDelta;
-        stat.mean = stat.mean + delta / stat.count;
-        val newDelta = value - stat.mean;
-        // Обновление дисперсии методом Welford
-        stat.sumSquares = stat.sumSquares + delta * newDelta;
-    }
-
 
     /**
      * Проверяет показание на аномалию с использованием Z-скор и CUSUM.
@@ -159,7 +154,7 @@ public class AnomalyAnalyzer extends Analyzer<AnomalyModel> {
      * @param value проверяемое значение давления
      * @return true - обнаружена аномалия, false - нормальное значение
      */
-    private boolean checkAnomaly(AnomalyModel model, double value) {
+    protected boolean checkAnomaly(AnomalyModel model, double value) {
         if (model.stat.count <= 1) return false;
 
         // расчет стандартного отклонения
@@ -173,7 +168,49 @@ public class AnomalyAnalyzer extends Analyzer<AnomalyModel> {
         return zScore > LEAK_THRESHOLD || model.cusum > CUSUM_THRESHOLD;
     }
 
-    private double applyFilter(AnomalyModel model, double pressure) {
+    /**
+     * Обновляет статистики (среднее и дисперсию) для датчика.
+     */
+    protected void updateStats(Stat stat, double value) {
+        switch (UPDATE_MODE) {
+            case EXPONENTIAL -> updateExponential(stat, value);
+            case WELFORD -> updateWelford(stat, value);
+        }
+    }
+
+    /**
+     * Алгоритм Уэлфорда (как в текущей реализации).
+     */
+    protected void updateWelford(Stat stat, double value) {
+        val oldMean = stat.mean;
+        stat.mean = oldMean + (value - oldMean) / (stat.count + 1);
+        val newDelta = value - stat.mean;
+
+        if (stat.count > 0) {
+            stat.sumSquares += (value - oldMean) * newDelta;
+        }
+        stat.count += 1;
+    }
+
+    /**
+     * Экспоненциальное сглаживание с DECAY_FACTOR.
+     */
+    protected void updateExponential(Stat stat, double value) {
+        if (stat.count == 0) {
+            stat.mean = value;
+            stat.sumSquares = 0;
+        } else {
+            // Обновление среднего
+            stat.mean = stat.mean * (1 - DECAY_FACTOR) + value * DECAY_FACTOR;
+            // Обновление суммы квадратов отклонений
+            val delta = value - stat.mean;
+            stat.sumSquares = (1 - DECAY_FACTOR) * stat.sumSquares + DECAY_FACTOR * delta * delta;
+        }
+        stat.count += 1;
+    }
+
+
+    protected double applyFilter(AnomalyModel model, double pressure) {
         return switch (FILTER_TYPE) {
             case MOVING_AVERAGE -> applyMovingAverage(model, pressure);
             case MEDIAN -> applyMedianFilter(model, pressure);
@@ -183,7 +220,7 @@ public class AnomalyAnalyzer extends Analyzer<AnomalyModel> {
     /**
      * Сглаживание по медиане
      */
-    private double applyMovingAverage(AnomalyModel model, double value) {
+    protected double applyMovingAverage(AnomalyModel model, double value) {
         model.measurements.addLast(value);
         if (model.measurements.size() > FILTER_WINDOW) {
             model.measurements.removeFirst();
@@ -197,39 +234,7 @@ public class AnomalyAnalyzer extends Analyzer<AnomalyModel> {
     /**
      * Сглаживание по медиане
      */
-    /*private double applyMedianFilter(AnomalyModel model, double value) {
-        model.measurements.addLast(value);
-
-        if (model.measurements.size() > FILTER_WINDOW) {
-            model.measurements.removeFirst();
-        }
-        val sorted = new ArrayList<>(model.measurements);
-        Collections.sort(sorted);
-        val middle = sorted.size() / 2;
-        if (sorted.size() % 2 == 0) {
-            return (sorted.get(middle - 1) + sorted.get(middle)) / 2.0;
-        } else {
-            return sorted.get(middle);
-        }
-    }*/
-    /*private double applyMedianFilter(AnomalyModel model, double value) {
-        if (model.measurements.size() == FILTER_WINDOW) {
-            val oldest = model.measurements.removeFirst();
-            model.sortedMeasurements.remove(oldest);
-        }
-        model.measurements.addLast(value);
-        var index = Collections.binarySearch(model.sortedMeasurements, value);
-        if (index < 0) index = -index - 1;
-        model.sortedMeasurements.add(index, value);
-
-        val size = model.sortedMeasurements.size();
-        if (size % 2 == 0) {
-            return (model.sortedMeasurements.get(size / 2 - 1) + model.sortedMeasurements.get(size / 2)) / 2;
-        } else {
-            return model.sortedMeasurements.get(size / 2);
-        }
-    }*/
-    private double applyMedianFilter(AnomalyModel model, double value) {
+    protected double applyMedianFilter(AnomalyModel model, double value) {
         // Добавление нового элемента
         model.measurements.add(value);
 
@@ -273,8 +278,8 @@ public class AnomalyAnalyzer extends Analyzer<AnomalyModel> {
 
     private void pruneHeap(PriorityQueue<Double> heap, Map<Double, Integer> expired) {
         while (!heap.isEmpty() && expired.getOrDefault(heap.peek(), 0) > 0) {
-            double val = heap.poll();
-            int count = expired.get(val);
+            val val = heap.poll();
+            val count = expired.get(val);
             if (count == 1) {
                 expired.remove(val);
             } else {
@@ -287,6 +292,7 @@ public class AnomalyAnalyzer extends Analyzer<AnomalyModel> {
     /**
      * Предсказание следующей итерации давления
      */
+    @Override
     public double predictNextPressure(AnomalyModel model) {
         if (model == null || model.stat == null) {
             return 0.0;
@@ -329,7 +335,7 @@ public class AnomalyAnalyzer extends Analyzer<AnomalyModel> {
     /**
      * Линейная регрессия
      */
-    private double calculateSlop(double[] x, double[] y) {
+    protected double calculateSlop(double[] x, double[] y) {
         val n = x.length;
         if (n < 2) return 0.0;
 
@@ -352,6 +358,4 @@ public class AnomalyAnalyzer extends Analyzer<AnomalyModel> {
         MOVING_AVERAGE,
         MEDIAN
     }
-
-
 }

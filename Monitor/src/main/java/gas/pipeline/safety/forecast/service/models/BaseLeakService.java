@@ -32,5 +32,6 @@ public abstract class BaseLeakService {
         });
     }
 
+    @Async
     protected abstract void processSensorReadings(String sensorId, List<SensorReading> data);
 }

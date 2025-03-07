@@ -1,5 +1,6 @@
 package gas.pipeline.safety.forecast.config.model;
 
+import gas.pipeline.safety.forecast.util.analyzer.Analyzer;
 import lombok.Getter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
@@ -15,4 +16,6 @@ public class ModelsConfig {
     private int predictionDays;
     @Value("${average.frequency:30}")
     private int averageFrequency;
+    @Value("${update.mode}")
+    private Analyzer.UpdateMode updateMode;
 }

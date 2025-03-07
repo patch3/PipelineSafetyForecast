@@ -6,7 +6,7 @@ import lombok.*;
 @ToString
 @EqualsAndHashCode(callSuper = false)
 @AllArgsConstructor
-public class BayesianModel extends Model {
+public class ProbabilityModel extends Model {
     public static final double DEFAULT_PROBABILITY = 0.001;
 
     // Статистики для режима утечки
@@ -17,15 +17,15 @@ public class BayesianModel extends Model {
     @Setter
     private double leakProbability;
 
-    public BayesianModel() {
+    public ProbabilityModel() {
         this(new Stat(), new Stat(), DEFAULT_PROBABILITY);
     }
 
-    public BayesianModel(BayesianModel copy) {
+    public ProbabilityModel(ProbabilityModel copy) {
         this(copy.leak, copy.normal, copy.leakProbability);
     }
 
-    public BayesianModel(double mean, double sumSquares, double leakProbability) {
+    public ProbabilityModel(double mean, double sumSquares, double leakProbability) {
         this(new Stat(mean, sumSquares), new Stat(mean, sumSquares), leakProbability);
     }
 

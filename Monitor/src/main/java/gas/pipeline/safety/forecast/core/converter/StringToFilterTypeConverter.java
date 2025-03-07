@@ -1,7 +1,7 @@
 package gas.pipeline.safety.forecast.core.converter;
 
-import gas.pipeline.safety.forecast.util.Analyzer;
-import gas.pipeline.safety.forecast.util.AnomalyAnalyzer;
+import gas.pipeline.safety.forecast.util.analyzer.Analyzer;
+import gas.pipeline.safety.forecast.util.analyzer.AnomalyAnalyzer;
 import lombok.NonNull;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.stereotype.Component;

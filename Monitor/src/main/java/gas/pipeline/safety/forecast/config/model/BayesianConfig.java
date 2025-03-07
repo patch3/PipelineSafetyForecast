@@ -1,6 +1,7 @@
 package gas.pipeline.safety.forecast.config.model;
 
-import gas.pipeline.safety.forecast.util.BayesianTheorem;
+import gas.pipeline.safety.forecast.util.analyzer.BayesianTheorem;
+import gas.pipeline.safety.forecast.util.analyzer.IProbability;
 import lombok.Getter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -12,15 +13,18 @@ import org.springframework.context.annotation.PropertySource;
 @PropertySource("classpath:config/bayesian.properties")
 public class BayesianConfig {
 
+    private final ModelsConfig modelsConfig;
     @Value("${leak.decay.factor:0.7}")
-    public double leakDecayFactor;
+    private double leakDecayFactor;
     @Value("${normal.decay.factor:0.2}")
-    public double normalDecayFactor;
-    @Value("${update.mode}")
-    private BayesianTheorem.UpdateMode updateMode;
+    private double normalDecayFactor;
+
+    public BayesianConfig(ModelsConfig modelsConfig) {
+        this.modelsConfig = modelsConfig;
+    }
 
     @Bean
-    public BayesianTheorem bayesianLeakModel() {
-        return new BayesianTheorem(leakDecayFactor, normalDecayFactor, updateMode);
+    public IProbability bayesianLeakModel() {
+        return new BayesianTheorem(leakDecayFactor, normalDecayFactor, modelsConfig.getUpdateMode());
     }
 }
