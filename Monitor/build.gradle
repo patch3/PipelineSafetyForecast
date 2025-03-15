@@ -29,27 +29,29 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
-
-    // Apache Commons
-    implementation 'org.apache.commons:commons-math3:3.6.1'
-    // Jackson Datatype: JSR310
-    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.18.2'
-
-
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation 'org.springframework.boot:spring-boot-starter-security'
     implementation 'org.thymeleaf.extras:thymeleaf-extras-springsecurity6'
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
 
 
+    // Apache Commons
+    implementation 'org.apache.commons:commons-math3:3.6.1'
+    // Jackson Datatype: JSR310
+    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.18.2'
+
+    //jARIMA
+    implementation files('lib/jARIMA-lib-2.3.2.jar')
+
     // Lombok
     compileOnly 'org.projectlombok:lombok:1.18.30'
     annotationProcessor 'org.projectlombok:lombok:1.18.30'
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
 
+
     // Runtime
     runtimeOnly 'org.postgresql:postgresql'
-    providedRuntime 'org.springframework.boot:spring-boot-starter-tomcat'
+    //providedRuntime 'org.springframework.boot:spring-boot-starter-tomcat'
 
 
     // Tests

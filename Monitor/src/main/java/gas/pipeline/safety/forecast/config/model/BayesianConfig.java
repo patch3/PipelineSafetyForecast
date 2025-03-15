@@ -12,7 +12,6 @@ import org.springframework.context.annotation.PropertySource;
 @Configuration
 @PropertySource("classpath:config/bayesian.properties")
 public class BayesianConfig {
-
     private final ModelsConfig modelsConfig;
     @Value("${leak.decay.factor:0.7}")
     private double leakDecayFactor;

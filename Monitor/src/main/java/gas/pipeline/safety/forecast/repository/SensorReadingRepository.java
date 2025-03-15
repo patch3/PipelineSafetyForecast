@@ -31,5 +31,11 @@ public interface SensorReadingRepository extends JpaRepository<SensorReading, Lo
             LocalDateTime start,
             LocalDateTime end
     );
+
+    List<SensorReading> findBySensorNameAndTimestampBetween(
+            String sensorName,
+            LocalDateTime start,
+            LocalDateTime end
+    );
 }
 

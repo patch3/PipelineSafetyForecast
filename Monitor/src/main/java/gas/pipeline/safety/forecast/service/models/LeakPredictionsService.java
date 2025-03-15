@@ -10,18 +10,22 @@ import gas.pipeline.safety.forecast.util.analyzer.IProbability;
 import gas.pipeline.safety.forecast.util.model.ProbabilityModel;
 import lombok.*;
 import lombok.extern.slf4j.Slf4j;
+import math.series.time.ForecastResult;
+import math.series.time.TimeSeries;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 @Slf4j
 @Service
 public class LeakPredictionsService extends BaseLeakService {
-    private final IProbability leakModel;
+    private final TimeSeries<? extends ForecastResult> timeSeries;
+    private final IProbability probabilityAnalyzer;
     private final IAnomaly anomalyAnalyzer;
 
     private final int defaultTrainingDays;
@@ -31,13 +35,15 @@ public class LeakPredictionsService extends BaseLeakService {
 
     @Autowired
     public LeakPredictionsService(SensorReadingRepository sensorReadingRepo,
-                                  IProbability leakModel,
+                                  IProbability probabilityAnalyzer,
                                   IAnomaly anomalyAnalyzer,
+                                  TimeSeries<?> timeSeries,
                                   ModelsConfig modelsConfig) {
         super(sensorReadingRepo, modelsConfig);
 
-        this.leakModel = leakModel;
+        this.probabilityAnalyzer = probabilityAnalyzer;
         this.anomalyAnalyzer = anomalyAnalyzer;
+        this.timeSeries = timeSeries;
 
         this.defaultTrainingDays = modelsConfig.getTrainingDays();
         this.defaultPredictionsDays = modelsConfig.getPredictionDays();
@@ -47,32 +53,32 @@ public class LeakPredictionsService extends BaseLeakService {
     @Override
     protected void processSensorReadings(String sensorName, List<SensorReading> data) {
         data.forEach(reading ->
-                leakModel.update(
+                probabilityAnalyzer.update(
                         reading.getSensor().getName(),
                         reading.isLeak(),
                         reading.getPressure()
                 )
         );
-        checkAlerts(leakModel.getModel(sensorName));
+        checkAlerts(probabilityAnalyzer.getModel(sensorName));
     }
 
 
     public void processNewReadings(SensorReading reading) {
-        leakModel.update(reading.getSensor().getName(), reading.isLeak(), reading.getPressure());
-        checkAlerts(leakModel.getModel(reading.getSensor().getName()));
+        probabilityAnalyzer.update(reading.getSensor().getName(), reading.isLeak(), reading.getPressure());
+        checkAlerts(probabilityAnalyzer.getModel(reading.getSensor().getName()));
     }
 
-    public List<LeakPrediction> generatePredictionsForPeriod(String sensorName) {
-        val forecastBayesianTheorem = new BayesianTheorem(leakModel);
+    /*public List<LeakPrediction> generatePredictionsForPeriod(String sensorName) {
+        val forecastBayesianTheorem = new BayesianTheorem(probabilityAnalyzer);
         val sensorBayesianTheorem = forecastBayesianTheorem.getModel(sensorName);
 
         val forecastAnomalyAnalyzer = new AnomalyAnalyzer(anomalyAnalyzer);
         val sensorAnomalyModel = forecastAnomalyAnalyzer.getModel(sensorName);
 
-/*        val originalStats = anomalyAnalyzer.getModel(sensorName);
+*//*      val originalStats = anomalyAnalyzer.getModel(sensorName);
         if (originalStats != null) {
             forecastAnomalyAnalyzer.punSensor(sensorName, new AnomalyModel(originalStats)) .getModel() getSensorModels().put(sensorName, new AnomalyModel(originalStats));
-        }*/
+        }*//*
 
         var frequency = calculateFrequency(sensorName);
         frequency = frequency > 0 ? frequency : defaultAverageFrequency; // Используем значение по умолчанию
@@ -101,6 +107,67 @@ public class LeakPredictionsService extends BaseLeakService {
                     .probability(probability)
                     .build());
         }
+        return predictions;
+    }*/
+
+    public List<LeakPrediction> generatePredictionsForPeriod(String sensorName) {
+        // Получаем исторические данные за defaultPredictionsDays из БД
+        LocalDateTime endDate = LocalDateTime.now();
+        LocalDateTime startDate = endDate.minusDays(defaultPredictionsDays);
+        List<SensorReading> historicalData = sensorReadingRepo.findBySensorNameAndTimestampBetween(
+                sensorName,
+                startDate,
+                endDate
+        );
+
+        // Проверяем наличие данных
+        if (historicalData.isEmpty()) {
+            log.warn("No historical data for sensor: {}", sensorName);
+            return Collections.emptyList();
+        }
+
+        // Преобразуем данные в массив значений давления
+        double[] pressureData = historicalData.stream()
+                .mapToDouble(SensorReading::getPressure)
+                .toArray();
+
+        // Обучаем модель временных рядов
+        timeSeries.fit(pressureData);
+        ForecastResult forecastResult = timeSeries.forecast(
+                (int)(defaultPredictionsDays * calculateFrequency(sensorName))
+        );
+
+        // Инициализируем компоненты прогнозирования
+        val forecastBayesianTheorem = new BayesianTheorem(probabilityAnalyzer);
+        val sensorBayesianTheorem = forecastBayesianTheorem.getModel(sensorName);
+
+        val forecastAnomalyAnalyzer = new AnomalyAnalyzer(anomalyAnalyzer);
+        //val sensorAnomalyModel = forecastAnomalyAnalyzer.getModel(sensorName);
+
+        // Рассчитываем параметры временных интервалов
+        var frequency = calculateFrequency(sensorName);
+        frequency = frequency > 0 ? frequency : defaultAverageFrequency;
+        val intervalMinutes = (long) (1440L / frequency);
+
+        // Собираем прогнозы
+        val predictions = new ArrayList<LeakPrediction>();
+        val currentTime = LocalDateTime.now();
+
+        int predictionIndex = 0;
+        for (double predictedPressure : forecastResult.getForecast()) {
+            // Проверяем аномалии и обновляем модели
+            val isAnomaly = forecastAnomalyAnalyzer.analyzePressure(sensorName, predictedPressure);
+            forecastBayesianTheorem.update(sensorName, isAnomaly, predictedPressure);
+
+            // Создаем объект прогноза
+            predictions.add(LeakPrediction.builder()
+                    .timestamp(currentTime.plusMinutes(predictionIndex * intervalMinutes))
+                    .probability(sensorBayesianTheorem.getLeakProbability())
+                    .build());
+
+            predictionIndex++;
+        }
+
         return predictions;
     }
 

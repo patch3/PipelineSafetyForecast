@@ -1,5 +1,6 @@
 package gas.pipeline.safety.forecast.util.analyzer;
 
+import gas.pipeline.safety.forecast.util.mod.Mode;
 import gas.pipeline.safety.forecast.util.model.Model;
 import gas.pipeline.safety.forecast.util.model.Stat;
 
@@ -50,11 +51,10 @@ public abstract class Analyzer<T extends Model> {
     }
 
 
-    public enum UpdateMode implements Analyzer.Mode {
+    public enum UpdateMode implements Mode {
         WELFORD,
         EXPONENTIAL
     }
 
-    public interface Mode {
-    }
+
 }
