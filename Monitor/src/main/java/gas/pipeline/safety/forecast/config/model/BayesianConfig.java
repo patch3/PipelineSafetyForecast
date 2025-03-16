@@ -17,6 +17,10 @@ public class BayesianConfig {
     private double leakDecayFactor;
     @Value("${normal.decay.factor:0.2}")
     private double normalDecayFactor;
+    @Value("${prediction.days:7}")
+    private int predictionDays;
+    @Value("${average.frequency:10}")
+    private int averageFrequency;
 
     public BayesianConfig(ModelsConfig modelsConfig) {
         this.modelsConfig = modelsConfig;

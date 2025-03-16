@@ -55,6 +55,4 @@ public abstract class Analyzer<T extends Model> {
         WELFORD,
         EXPONENTIAL
     }
-
-
 }

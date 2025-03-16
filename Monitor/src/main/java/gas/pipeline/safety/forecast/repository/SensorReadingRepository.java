@@ -1,8 +1,10 @@
 package gas.pipeline.safety.forecast.repository;
 
+import gas.pipeline.safety.forecast.model.sensor.Sensor;
 import gas.pipeline.safety.forecast.model.sensor.SensorReading;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
@@ -20,11 +22,31 @@ public interface SensorReadingRepository extends JpaRepository<SensorReading, Lo
     List<String> findDistinctSensorNames();
 
 
-    @Query("SELECT timestamp FROM SensorReading ORDER BY timestamp ASC LIMIT 1")
+    @Query(
+            value = "SELECT timestamp FROM sensor_reading ORDER BY timestamp ASC LIMIT 1",
+            nativeQuery = true
+    )
     Optional<LocalDateTime> findFirstTimestamp();
 
-    @Query("SELECT timestamp FROM SensorReading ORDER BY timestamp DESC LIMIT 1")
+    @Query(
+            value = "SELECT timestamp FROM sensor_reading ORDER BY timestamp DESC LIMIT 1",
+            nativeQuery = true
+    )
     Optional<LocalDateTime> findLastTimestamp();
+
+
+    @Query(
+            value = "SELECT timestamp FROM sensor_reading WHERE sensor_id = :sensorId ORDER BY timestamp ASC LIMIT 1",
+            nativeQuery = true
+    )
+    Optional<LocalDateTime> findFirstTimestampBySensorId(@Param("sensorId") Long sensorId);
+
+    @Query(
+            value = "SELECT timestamp FROM sensor_reading WHERE sensor_id = :sensorId ORDER BY timestamp DESC LIMIT 1",
+            nativeQuery = true
+    )
+    Optional<LocalDateTime> findLastTimestampBySensorId(@Param("sensorId") Long sensorId);
+
 
     List<SensorReading> findBySensorNameAndTimestampBetweenAndIsLeakFalse(
             String sensorName,

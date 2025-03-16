@@ -11,7 +11,7 @@ import java.util.*;
 @AllArgsConstructor
 public class AnomalyModel extends Model {
     public static final double DEFAULT_CUSUM = 0.5;
-    
+
     public Stat stat;
     public double cusum; // Текущее значение кумулятивной суммы отклонений
 

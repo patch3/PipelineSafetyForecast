@@ -12,4 +12,5 @@ public interface SensorRepository extends JpaRepository<Sensor, Long> {
 
     @Query("SELECT s.name FROM Sensor s")
     List<String> findAllSensorNames();
+
 }

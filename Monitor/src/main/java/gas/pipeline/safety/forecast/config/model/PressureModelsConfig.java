@@ -9,9 +9,6 @@ import gas.pipeline.safety.forecast.util.mod.Mode;
 import gas.pipeline.safety.forecast.util.time.series.ISimplePrediction;
 import gas.pipeline.safety.forecast.util.time.series.LinearRegression;
 import lombok.Getter;
-import math.series.time.ForecastResult;
-import math.series.time.TimeSeries;
-import math.series.time.arima.analytics.Arima;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -19,23 +16,28 @@ import org.springframework.context.annotation.PropertySource;
 
 @Getter
 @Configuration
-@PropertySource(value = "classpath:config/pressure.properties")
+@PropertySource(value = "classpath:config/anomaly.properties")
 public class PressureModelsConfig {
+
     private final ModelsConfig modelsConfig;
-    @Value("${cusum.threshold:30}")
+
+    @Value("${cusum.threshold:3}")
     private Double cusumThreshold;
+
     @Value("${leak.threshold:7}")
     private Double leakThreshold;
+
     @Value("${decay.factor:0.3}")
     private Double decayFactor;
+
     @Value("${calibration.records:30}")
     private Integer calibrationRecords;
+
     @Value("${moving.average.window:10}")
     private Integer filterWindow;
+
     @Value("${filter.strategy:median}")
     private FilterMode filterStrategy;
-    @Value("${forecast.model:arima}")
-    private ForecastModelMode forecastModel;
 
 
     public PressureModelsConfig(ModelsConfig modelsConfig) {
@@ -56,10 +58,6 @@ public class PressureModelsConfig {
         );
     }
 
-    @Bean
-    public TimeSeries<? extends ForecastResult> pressureForecastModel() {
-        return forecastModel.getModel();
-    }
 
     @Bean
     public ISimplePrediction linearRegression() {
@@ -78,15 +76,5 @@ public class PressureModelsConfig {
         }
     }
 
-    public enum ForecastModelMode implements Mode {
-        LINEAR_REGRESSION,
-        ARIMA;
 
-        public TimeSeries<? extends ForecastResult> getModel() {
-            return switch (this) {
-                case LINEAR_REGRESSION -> new LinearRegression();
-                case ARIMA -> new Arima();
-            };
-        }
-    }
 }

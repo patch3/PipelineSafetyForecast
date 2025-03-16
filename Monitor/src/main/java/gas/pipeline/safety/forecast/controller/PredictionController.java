@@ -3,6 +3,7 @@ package gas.pipeline.safety.forecast.controller;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import gas.pipeline.safety.forecast.model.sensor.Sensor;
 import gas.pipeline.safety.forecast.repository.SensorRepository;
 import gas.pipeline.safety.forecast.service.models.LeakPredictionsService;
 import lombok.val;
@@ -35,9 +36,9 @@ public class PredictionController {
     ) throws JsonProcessingException {
         val sensorsPredictions = new HashMap<String, List<LeakPredictionsService.LeakPrediction>>();
         if (sensorName == null) {
-            val sensors = sensorRepository.findAllSensorNames();
+            val sensors = sensorRepository.findAll();
             sensors.forEach(sensor ->
-                    sensorsPredictions.put(sensor, leakPredictionsService.generatePredictionsForPeriod(sensor))
+                    sensorsPredictions.put(sensor.getName(), leakPredictionsService.generatePredictionsForPeriod(sensor.getName()))
             );
         } else {
             sensorsPredictions.put(sensorName, leakPredictionsService.generatePredictionsForPeriod(sensorName));

@@ -12,10 +12,7 @@ import org.springframework.context.annotation.PropertySource;
 public class ModelsConfig {
     @Value("${training.days:30}")
     private int trainingDays;
-    @Value("${prediction.days:7}")
-    private int predictionDays;
-    @Value("${average.frequency:30}")
-    private int averageFrequency;
+
     @Value("${update.mode}")
     private Analyzer.UpdateMode updateMode;
 }
