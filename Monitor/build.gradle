@@ -41,7 +41,7 @@ dependencies {
     implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.18.2'
 
     //jARIMA
-    implementation files('lib/jARIMA-lib-2.3.2.jar')
+    implementation files('lib/jARIMA-lib-2.3.3.jar')
 
     // Lombok
     compileOnly 'org.projectlombok:lombok:1.18.30'

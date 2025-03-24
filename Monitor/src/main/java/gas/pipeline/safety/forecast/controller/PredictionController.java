@@ -3,7 +3,6 @@ package gas.pipeline.safety.forecast.controller;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import gas.pipeline.safety.forecast.model.sensor.Sensor;
 import gas.pipeline.safety.forecast.repository.SensorRepository;
 import gas.pipeline.safety.forecast.service.models.LeakPredictionsService;
 import lombok.val;

@@ -65,7 +65,7 @@ public class AuthController {
 
             return "registration";
         }
-        val isRegist = registrationService.registerUser(dto.getUsername(), dto.getEmail(), dto.getPassword());
+        val isRegist = registrationService.registerUser(dto.getUsername(), dto.getPassword());
         if (!isRegist) {
             model.addAttribute("errors", "Пользователь c такими данными уже зарегистрирован");
             model.addAttribute("form", dto);

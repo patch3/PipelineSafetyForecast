@@ -11,17 +11,13 @@ import java.util.*;
 @AllArgsConstructor
 public class AnomalyModel extends Model {
     public static final double DEFAULT_CUSUM = 0.5;
-
-    public Stat stat;
-    public double cusum; // Текущее значение кумулятивной суммы отклонений
-
     public final int sizeWindow;
-
     public final ArrayDeque<Double> measurements;
     public final PriorityQueue<Double> maxHeap;
     public final PriorityQueue<Double> minHeap;
     public final Map<Double, Integer> expired;
-
+    public Stat stat;
+    public double cusum; // значение кумулятивной суммы отклонений
 
 
     public AnomalyModel(Stat stat, double cusum, int sizeWindow) {

@@ -1,6 +1,5 @@
 package gas.pipeline.safety.forecast.repository;
 
-import gas.pipeline.safety.forecast.model.sensor.Sensor;
 import gas.pipeline.safety.forecast.model.sensor.SensorReading;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;

@@ -17,7 +17,7 @@ import org.springframework.context.annotation.PropertySource;
 @Getter
 @Configuration
 @PropertySource(value = "classpath:config/anomaly.properties")
-public class PressureModelsConfig {
+public class AnomalyModelsConfig {
 
     private final ModelsConfig modelsConfig;
 
@@ -40,7 +40,7 @@ public class PressureModelsConfig {
     private FilterMode filterStrategy;
 
 
-    public PressureModelsConfig(ModelsConfig modelsConfig) {
+    public AnomalyModelsConfig(ModelsConfig modelsConfig) {
         this.modelsConfig = modelsConfig;
     }
 

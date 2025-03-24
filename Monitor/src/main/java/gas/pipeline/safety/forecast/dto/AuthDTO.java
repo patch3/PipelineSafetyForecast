@@ -1,6 +1,5 @@
 package gas.pipeline.safety.forecast.dto;
 
-import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
@@ -13,10 +12,6 @@ public class AuthDTO {
     @Size(min = 3, max = 20, message = "Имя пользователя должно содержать от 3 до 20 символов")
     private String username;
 
-    @NotBlank(message = "Email не может быть пустым")
-    @Email(message = "Некорректный формат email")
-    private String email;
-
     @NotBlank(message = "Пароль не может быть пустым")
     @Pattern(regexp = "^(?=.*[0-9])(?=.*[a-zA-Z])(?=.*[!@#$%^&*])[^\\s]+$", message = "Пароль должен содержать буквы, цифры и специальные символы")
     @Size(min = 8, max = 25, message = "Пароль должен содержать от 8 до 25 символов")
@@ -24,7 +19,6 @@ public class AuthDTO {
 
     public AuthDTO() {
         username = "";
-        email = "";
         password = "";
     }
 }

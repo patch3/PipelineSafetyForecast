@@ -138,7 +138,7 @@ public class AnomalyAnalyzer extends Analyzer<AnomalyModel> implements IAnomaly 
             updateStats(model.stat, filteredPressure);
             return false;
         }
-        val isLeak = checkAnomaly(model, filteredPressure);
+        var isLeak = checkAnomaly(model, filteredPressure);
         // Обновляем статистику только при нормальных показаниях
         if (!isLeak) {
             updateStats(model.stat, filteredPressure);

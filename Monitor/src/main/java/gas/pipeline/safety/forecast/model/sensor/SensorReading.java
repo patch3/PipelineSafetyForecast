@@ -21,7 +21,9 @@ public class SensorReading {
     private Sensor sensor;
 
     private double pressure;
+
     private boolean isLeak;
+
     private LocalDateTime timestamp;
 
 

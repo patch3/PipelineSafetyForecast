@@ -2,7 +2,6 @@ package gas.pipeline.safety.forecast.service.models;
 
 import gas.pipeline.safety.forecast.config.model.ModelsConfig;
 import gas.pipeline.safety.forecast.config.model.PredictionConfig;
-import gas.pipeline.safety.forecast.model.sensor.Sensor;
 import gas.pipeline.safety.forecast.model.sensor.SensorReading;
 import gas.pipeline.safety.forecast.repository.SensorReadingRepository;
 import gas.pipeline.safety.forecast.util.analyzer.AnomalyAnalyzer;
@@ -27,7 +26,6 @@ import java.util.List;
 @Slf4j
 @Service
 public class LeakPredictionsService extends BaseLeakService {
-    private static final int MINUTE_RER_DAY = 1440; // 24 * 60
 
     private static final Duration DAY_DURATION = Duration.ofDays(1);
 

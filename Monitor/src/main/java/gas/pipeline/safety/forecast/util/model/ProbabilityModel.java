@@ -8,6 +8,7 @@ import lombok.*;
 @AllArgsConstructor
 public class ProbabilityModel extends Model {
     public static final double DEFAULT_PROBABILITY = 0.001;
+    private static final double SMOOTHING_ALPHA = 1.0;
 
     // Статистики для режима утечки
     public final Stat leak;
@@ -35,10 +36,15 @@ public class ProbabilityModel extends Model {
      * @return вероятность утечки (0.0, если данных недостаточно)
      */
     public double getLeakProbability() {
-        // Требуется минимум 2 наблюдения для обеих статистик
-        if (leak.count < 2 || normal.count < 2) {
-            return DEFAULT_PROBABILITY; // Недостаточно данных для надежной оценки
+        // Применяем сглаживание Лапласа
+        double smoothedLeakCount = leak.count + SMOOTHING_ALPHA;
+        double smoothedTotal = leak.count + normal.count + 2 * SMOOTHING_ALPHA;
+
+        // Если данных недостаточно, возвращаем дефолтное значение
+        if (smoothedTotal <= 0) {
+            return DEFAULT_PROBABILITY;
         }
-        return leakProbability;
+
+        return smoothedLeakCount / smoothedTotal;
     }
 }

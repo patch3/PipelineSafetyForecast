@@ -18,15 +18,13 @@ public class RegistrationService {
         this.passwordEncoder = passwordEncoder;
     }
 
-    public boolean registerUser(String username, String email, String password) {
-        if (employeeRepository.findByUsername(username).isPresent() ||
-                employeeRepository.findByEmail(email).isPresent()) {
+    public boolean registerUser(String username, String password) {
+        if (employeeRepository.findByUsername(username).isPresent()) {
             return false;
         }
 
         Employee employee = new Employee();
         employee.setUsername(username);
-        employee.setEmail(email);
         employee.setPassword(passwordEncoder.encode(password));
 
         employeeRepository.save(employee);

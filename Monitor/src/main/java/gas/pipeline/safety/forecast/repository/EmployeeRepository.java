@@ -8,7 +8,5 @@ import java.util.Optional;
 
 @Repository
 public interface EmployeeRepository extends JpaRepository<Employee, Long> {
-    Optional<Employee> findByUsername(String username); // Переименовано
-
-    Optional<Employee> findByEmail(String email); // Добавлено для регистрации
+    Optional<Employee> findByUsername(String username);
 }
